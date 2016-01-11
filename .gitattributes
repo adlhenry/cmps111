@@ -1,0 +1,2 @@
+# Prevent LF normalization
+* text eol=lf
