@@ -12,7 +12,7 @@ EXECBIN   = myshell
 all : ${EXECBIN}
 
 ${EXECBIN} : ${OBJECTS}
-	${CC} -o $@ ${OBJECTS}
+	${CC} -o $@ ${OBJECTS} -lfl
 
 %.o : %.c
 	${CC} -c $<

@@ -1,9 +1,10 @@
+%{
 // Author: Adam Henry, adlhenry@ucsc.edu
 
-%{
 int  _numargs = 10;
 char *_args[10];
 int  _argcount = 0;
+
 %}
 
 WORD		[a-zA-Z0-9\/\.-]+

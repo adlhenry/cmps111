@@ -1,6 +1,7 @@
 // Author: Adam Henry, adlhenry@ucsc.edu
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <stdio.h>
@@ -27,7 +28,7 @@ int main (int argc, char *argv[]) {
 	int i;
 	char **args;
 	
-	while (TRUE) {
+	while (true) {
 		args = getLine();
 		for (i = 0; args[i] != NULL; i++) {
 			printf("Argument %d: %s\n", i, args[i]);
