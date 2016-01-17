@@ -1,0 +1,7 @@
+// Author: Adam Henry, adlhenry@ucsc.edu
+
+Compile with: make
+Run as: ./cat filename [filename ...]
+A filename must be specified.
+
+Test with: ./cat test1 test2 test3

@@ -1,0 +1,17 @@
+# Author: Adam Henry, adlhenry@ucsc.edu
+
+GCC       = gcc -g -O0 -Wall -Wextra -std=c11
+SOURCE    = cat.c
+OBJECTS   = ${SOURCE:.c=.o}
+EXECBIN   = cat
+
+all : ${EXECBIN}
+
+${EXECBIN} : ${OBJECTS}
+	${GCC} -o $@ ${OBJECTS}
+
+%.o : %.c
+	${GCC} -c $<
+
+clean :
+	- rm ${OBJECTS}

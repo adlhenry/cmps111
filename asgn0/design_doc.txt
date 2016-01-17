@@ -1,0 +1,10 @@
+// Author: Adam Henry, adlhenry@ucsc.edu
+
+cat program
+
+cat opens a file and outputs the contents to stdout. If more than
+one file is specified, then it iterates through them outputting each
+to stdout.
+
+Errors cause a message to be printed to stderr and the next file 
+in the arguments begins processing.
