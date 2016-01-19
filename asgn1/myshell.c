@@ -24,6 +24,10 @@ void errprintf (char *string) {
 
 int main (int argc, char *argv[]) {
 	execname = basename(argv[0]);
+	if (argc > 1) {
+		errprintf("usage: no options supported");
+		return exit_status;
+	}
 	
 	int i;
 	char **args;
