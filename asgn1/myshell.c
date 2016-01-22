@@ -19,6 +19,8 @@ char *execname = NULL;
 char *outfile = NULL;
 char *infile = NULL;
 char **argvs[10];
+int cmdi = 0;
+int pipefd[2];
 
 // Print a warning to stderr
 void errprintf (char *string) {
@@ -38,9 +40,9 @@ void print_prompt () {
 void read_command () {
 	outfile = NULL;
 	infile = NULL;
+	cmdi = 0;
 	char **args = getLine();
-	argvs[0] = args;
-	int j = 0;
+	argvs[cmdi] = args;
 	for (int i = 0; args[i] != NULL; i++) {
 		switch (args[i][0]) {
 			case '>':
@@ -53,41 +55,9 @@ void read_command () {
 				break;
 			case '|':
 				args[i] = NULL;
-				argvs[j] = &args[i];
+				argvs[++cmdi] = &args[++i];
 				break;
 		}
-	}
-}
-
-/*
-int stdout_copy;
-int output_redirect (char *filename) {
-	if (filename == NULL) return -1;
-	stdout_copy = dup(STDOUT_FILENO);
-	close(STDOUT_FILENO);
-	int fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 00644);
-	if (fd == -1) perror(filename);
-	return fd;
-}
-
-void output_redirect_close (int fd) {
-	if (fd == -1) return;
-	close(fd);
-	dup(stdout_copy);
-}
-*/
-
-// Redirect stdout and stdin
-void redirect () {
-	if (outfile != NULL) {
-		close(STDOUT_FILENO);
-		int fd = creat(outfile, 00644);
-		if (fd == -1) perror(outfile);
-	}
-	if (infile != NULL) {
-		close(STDIN_FILENO);
-		int fd = open(infile, O_RDONLY);
-		if (fd == -1) perror(infile);
 	}
 }
 
@@ -103,6 +73,74 @@ bool is_exit (char **args) {
 	return false;
 }
 
+// Redirect stdout and stdin
+void redirect () {
+	if (outfile != NULL) {
+		close(STDOUT_FILENO);
+		int fd = creat(outfile, 00644);
+		if (fd == -1) perror(outfile);
+	}
+	if (infile != NULL) {
+		close(STDIN_FILENO);
+		int fd = open(infile, O_RDONLY);
+		if (fd == -1) perror(infile);
+	}
+}
+
+// Execute a command with possible file redirection
+void exec_c (char *command, char **parameters) {
+	int status;
+	pid_t pid = fork();
+	if (pid == -1) {
+		perror(execname);
+	} else if (pid != 0) {
+		int ret = wait(&status);
+		if (ret == -1) perror(execname);
+	} else {
+		redirect();
+		int ret = execvp(command, parameters);
+		if (ret == -1) {
+			perror(command);
+			exit(exit_status);
+		}
+	}
+}
+
+// Execute a piped command
+void exec_pipe (char *command, char **parameters, int i) {
+	pid_t pid = fork();
+	if (pid == -1) {
+		perror(execname);
+	} else if (pid == 0) {
+		close(pipefd[!i]);
+		close(i);
+		dup(pipefd[i]);
+		int ret = execvp(command, parameters);
+		if (ret == -1) {
+			perror(command);
+			exit(exit_status);
+		}
+	}
+}
+
+// Execute the command line
+void execute_command () {
+	if (cmdi == 0) {
+		exec_c(argvs[0][0], argvs[0]);
+	} else {		
+		if (pipe(pipefd) == -1) {
+			perror(execname);
+		}
+		exec_pipe(argvs[0][0], argvs[0], 1);
+		exec_pipe(argvs[1][0], argvs[1], 0);
+		close(pipefd[0]);
+		close(pipefd[1]);
+		while (true) {
+			if (wait(NULL) == -1) break;
+		}
+	}
+}
+
 // Main loop
 int main (int argc, char *argv[]) {
 	execname = basename(argv[0]);
@@ -113,30 +151,9 @@ int main (int argc, char *argv[]) {
 	
 	while (true) {
 		print_prompt();		
-		read_command();
-		
-		int status;
-		char **parameters = argvs[0];
-		char *command = parameters[0];
-		
-		if (is_exit(parameters)) continue;
-		
-		pid_t pid = fork();
-		if (pid == -1) {
-			perror(execname);
-		} else if (pid != 0) {
-			// Parent code
-			int ret = waitpid(-1, &status, 0);
-			if (ret == -1) perror(execname);
-		} else {
-			// Child code
-			redirect();
-			int ret = execvp(command, parameters);
-			if (ret == -1) {
-				perror(command);
-				exit(exit_status);
-			}
-		}
+		read_command();		
+		if (is_exit(argvs[0])) continue;
+		execute_command();
 	}
 	
 	return exit_status;
