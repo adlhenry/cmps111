@@ -14,6 +14,7 @@ all : ${EXECBIN}
 
 ${EXECBIN} : ${OBJECTS}
 	${CC} -o $@ ${OBJECTS} -lfl
+	-@rm ${LREPORT} ${LCREPORT}
 
 %.o : %.c
 	${CC} -c $<
