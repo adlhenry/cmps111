@@ -61,18 +61,6 @@ void read_command () {
 	}
 }
 
-// Check for exit command
-bool is_exit (char **args) {
-	if (strcmp(args[0], "exit") == 0) {
-		if (args[1] != NULL) {
-			errprintf("exit: no options supported");
-			return true;
-		}
-		exit(exit_status);
-	}
-	return false;
-}
-
 // Redirect stdin and stdout
 void redirect () {
 	if (infile != NULL) {
@@ -160,6 +148,15 @@ void exec_pipe (char *command, char **parameters, int i) {
 
 // Execute the command line
 void execute_command () {
+	if (argvs[0][0] == NULL) return;
+	if (strcmp(argvs[0][0], "exit") == 0) {
+		if (argvs[0][1] != NULL) {
+			errprintf("exit: no options supported");
+			return;
+		} else {
+			exit(exit_status);
+		}
+	}
 	if (cmdi == 0) {
 		exec_c(argvs[0][0], argvs[0]);
 	} else {
@@ -183,8 +180,7 @@ int main (int argc, char *argv[]) {
 	}
 	while (true) {
 		print_prompt();		
-		read_command();		
-		if (is_exit(argvs[0])) continue;
+		read_command();
 		execute_command();
 	}
 	return exit_status;
