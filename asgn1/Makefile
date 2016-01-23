@@ -6,15 +6,14 @@ LSOURCE   = lex.l
 LGEN      = lex.yy.c
 LGENO     = ${LGEN:.c=.o}
 OBJECTS   = ${SOURCE:.c=.o} ${LGENO}
-LREPORT   = lex.err
-LCREPORT  = lexc.err
+LREPORT   = /dev/null
+LCREPORT  = /dev/null
 EXECBIN   = myshell
 
 all : ${EXECBIN}
 
 ${EXECBIN} : ${OBJECTS}
 	${CC} -o $@ ${OBJECTS} -lfl
-	-@rm ${LREPORT} ${LCREPORT}
 
 %.o : %.c
 	${CC} -c $<
@@ -26,4 +25,4 @@ ${LGEN} : ${LSOURCE}
 	flex --outfile=${LGEN} ${LSOURCE} 2>${LREPORT}
 
 clean :
-	- rm ${OBJECTS} ${LGEN} ${LREPORT} ${LCREPORT}
+	- rm ${OBJECTS} ${LGEN}

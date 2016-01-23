@@ -16,11 +16,11 @@ extern char **getLine();
 int exit_status = EXIT_SUCCESS;
 char *execname = NULL;
 
-char *outfile = NULL;
 char *infile = NULL;
+char *outfile = NULL;
 char **argvs[10];
+int *pipes[9];
 int cmdi = 0;
-int pipefd[2];
 
 // Print a warning to stderr
 void errprintf (char *string) {
@@ -73,17 +73,17 @@ bool is_exit (char **args) {
 	return false;
 }
 
-// Redirect stdout and stdin
+// Redirect stdin and stdout
 void redirect () {
-	if (outfile != NULL) {
-		close(STDOUT_FILENO);
-		int fd = creat(outfile, 00644);
-		if (fd == -1) perror(outfile);
-	}
 	if (infile != NULL) {
 		close(STDIN_FILENO);
 		int fd = open(infile, O_RDONLY);
 		if (fd == -1) perror(infile);
+	}
+	if (outfile != NULL) {
+		close(STDOUT_FILENO);
+		int fd = creat(outfile, 00644);
+		if (fd == -1) perror(outfile);
 	}
 }
 
@@ -106,17 +106,52 @@ void exec_c (char *command, char **parameters) {
 	}
 }
 
+// Connect a pipe to stdin (0) or stdout (1)
+void connect_pipe (int *pipefd, int mode) {
+	close(pipefd[!mode]);
+	close(mode);
+	dup(pipefd[mode]);
+}
+
+// Open all necessary pipes
+void open_pipes () {
+	for (int i = 0; i < cmdi; i++) {
+		pipes[i] = malloc(2*sizeof(int));
+		if (pipe(pipes[i]) == -1) {
+			perror(execname);
+		}
+	}
+}
+
+// Close all pipes except pipe1 and pipe2
+void close_pipes (int pipe1, int pipe2) {
+	for (int i = 0; i < cmdi; i++) {
+		if (i != pipe1 && i != pipe2) {
+			close(pipes[i][0]);
+			close(pipes[i][1]);
+			free(pipes[i]);
+		}
+	}
+}
+
 // Execute a piped command
 void exec_pipe (char *command, char **parameters, int i) {
 	pid_t pid = fork();
 	if (pid == -1) {
 		perror(execname);
 	} else if (pid == 0) {
-		close(pipefd[!i]);
-		close(i);
-		dup(pipefd[i]);
-		int ret = execvp(command, parameters);
-		if (ret == -1) {
+		if (i == 0) {
+			close_pipes(0, 0);
+			connect_pipe(pipes[0], 1);
+		} else if (i == cmdi) {
+			close_pipes(i-1,i-1);
+			connect_pipe(pipes[i-1], 0);
+		} else {
+			close_pipes(i-1,i);
+			connect_pipe(pipes[i-1], 0);
+			connect_pipe(pipes[i], 1);
+		}
+		if (execvp(command, parameters) == -1) {
 			perror(command);
 			exit(exit_status);
 		}
@@ -127,14 +162,12 @@ void exec_pipe (char *command, char **parameters, int i) {
 void execute_command () {
 	if (cmdi == 0) {
 		exec_c(argvs[0][0], argvs[0]);
-	} else {		
-		if (pipe(pipefd) == -1) {
-			perror(execname);
+	} else {
+		open_pipes();
+		for (int i = 0; i <= cmdi; i++) {
+			exec_pipe(argvs[i][0], argvs[i], i);
 		}
-		exec_pipe(argvs[0][0], argvs[0], 1);
-		exec_pipe(argvs[1][0], argvs[1], 0);
-		close(pipefd[0]);
-		close(pipefd[1]);
+		close_pipes(-1, -1);
 		while (true) {
 			if (wait(NULL) == -1) break;
 		}
@@ -148,13 +181,11 @@ int main (int argc, char *argv[]) {
 		errprintf("usage: no options supported");
 		return exit_status;
 	}
-	
 	while (true) {
 		print_prompt();		
 		read_command();		
 		if (is_exit(argvs[0])) continue;
 		execute_command();
 	}
-	
 	return exit_status;
 }
