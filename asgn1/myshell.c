@@ -61,36 +61,21 @@ void read_command () {
 	}
 }
 
-// Redirect stdin and stdout
-void redirect () {
+// Redirect stdin from file
+void redirect_in () {
 	if (infile != NULL) {
 		close(STDIN_FILENO);
 		int fd = open(infile, O_RDONLY);
 		if (fd == -1) perror(infile);
 	}
+}
+
+// Redirect stdout to file
+void redirect_out () {
 	if (outfile != NULL) {
 		close(STDOUT_FILENO);
 		int fd = creat(outfile, 00644);
 		if (fd == -1) perror(outfile);
-	}
-}
-
-// Execute a command with possible file redirection
-void exec_c (char *command, char **parameters) {
-	int status;
-	pid_t pid = fork();
-	if (pid == -1) {
-		perror(execname);
-	} else if (pid != 0) {
-		int ret = wait(&status);
-		if (ret == -1) perror(execname);
-	} else {
-		redirect();
-		int ret = execvp(command, parameters);
-		if (ret == -1) {
-			perror(command);
-			exit(exit_status);
-		}
 	}
 }
 
@@ -122,16 +107,22 @@ void close_pipes (int pipe1, int pipe2) {
 	}
 }
 
-// Execute a piped command
+// Execute a command pipeline with possible file redirection
 void exec_pipe (char *command, char **parameters, int i) {
 	pid_t pid = fork();
 	if (pid == -1) {
 		perror(execname);
 	} else if (pid == 0) {
 		if (i == 0) {
-			close_pipes(0, 0);
-			connect_pipe(pipes[0], 1);
+			redirect_in();
+			if (i == cmdi) {
+				redirect_out();
+			} else {
+				close_pipes(0, 0);
+				connect_pipe(pipes[0], 1);
+			}
 		} else if (i == cmdi) {
+			redirect_out();
 			close_pipes(i-1,i-1);
 			connect_pipe(pipes[i-1], 0);
 		} else {
@@ -157,17 +148,13 @@ void execute_command () {
 			exit(exit_status);
 		}
 	}
-	if (cmdi == 0) {
-		exec_c(argvs[0][0], argvs[0]);
-	} else {
-		open_pipes();
-		for (int i = 0; i <= cmdi; i++) {
-			exec_pipe(argvs[i][0], argvs[i], i);
-		}
-		close_pipes(-1, -1);
-		while (true) {
-			if (wait(NULL) == -1) break;
-		}
+	open_pipes();
+	for (int i = 0; i <= cmdi; i++) {
+		exec_pipe(argvs[i][0], argvs[i], i);
+	}
+	close_pipes(-1, -1);
+	while (true) {
+		if (wait(NULL) == -1) break;
 	}
 }
 
