@@ -1,8 +1,8 @@
 %{
 // Author: Adam Henry, adlhenry@ucsc.edu
 
-int  _numargs = 10;
-char *_args[10];
+int  _numargs = 256;
+char *_args[256];
 int  _argcount = 0;
 
 %}

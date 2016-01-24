@@ -16,10 +16,11 @@ extern char **getLine();
 int exit_status = EXIT_SUCCESS;
 char *execname = NULL;
 
+bool badchar = false;
 char *infile = NULL;
 char *outfile = NULL;
-char **argvs[10];
-int *pipes[9];
+char **argvs[128];
+int *pipes[127];
 int cmdi = 0;
 
 // Print a warning to stderr
@@ -38,13 +39,15 @@ void print_prompt () {
 
 // Parse the command line
 void read_command () {
+	badchar = false;
 	outfile = NULL;
 	infile = NULL;
 	cmdi = 0;
 	char **args = getLine();
 	argvs[cmdi] = args;
 	for (int i = 0; args[i] != NULL; i++) {
-		switch (args[i][0]) {
+		char special = args[i][0];
+		switch (special) {
 			case '>':
 				args[i] = NULL;
 				outfile = args[++i];
@@ -57,6 +60,14 @@ void read_command () {
 				args[i] = NULL;
 				argvs[++cmdi] = &args[++i];
 				break;
+		}
+		if (special == '(' | special == ')'
+			| special == '&' | special == ';'
+			| special == '*') {
+			char buffer[64];
+			sprintf(buffer, "special '%c' not supported", special);
+			errprintf(buffer);
+			badchar = true;
 		}
 	}
 }
@@ -139,7 +150,7 @@ void exec_pipe (char *command, char **parameters, int i) {
 
 // Execute the command line
 void execute_command () {
-	if (argvs[0][0] == NULL) return;
+	if ((argvs[0][0] == NULL) | badchar) return;
 	if (strcmp(argvs[0][0], "exit") == 0) {
 		if (argvs[0][1] != NULL) {
 			errprintf("exit: no options supported");
