@@ -1,3 +1,16 @@
 // Author: Adam Henry, adlhenry@ucsc.edu
 
-
+COMPILE
+	make
+	
+RUN
+	./myshell
+	
+TEST
+	ls
+	ls -la > test
+	cat test
+	wc | sort < test > test2
+	cat < test2
+	ls | wc | wc | sort
+	exit
