@@ -8,9 +8,9 @@ RUN
 	
 TEST
 	ls
-	ls -la > test
-	cat test
-	wc | sort < test > test2
+	ls -la > test1
+	cat test1
+	wc | sort < test1 > test2
 	cat < test2
 	ls | wc | wc | sort
 	exit
