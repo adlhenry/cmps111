@@ -246,6 +246,9 @@ struct tdq {
 	struct runq	tdq_realtime;		/* real-time run queue. */
 	struct runq	tdq_timeshare;		/* timeshare run queue. */
 	struct runq	tdq_idle;		/* Queue of IDLE threads. */
+	struct runq	tdq_realtime_usr;	/* real-time user run queue. */
+	struct runq	tdq_timeshare_usr;	/* timeshare user run queue. */
+	struct runq	tdq_idle_usr;		/* Queue of IDLE user threads. */
 	char		tdq_name[TDQ_NAME_LEN];
 #ifdef KTR
 	char		tdq_loadname[TDQ_LOADNAME_LEN];
@@ -455,10 +458,13 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 {
 	struct td_sched *ts;
 	u_char pri;
-
+	uid_t uid;
+	
 	TDQ_LOCK_ASSERT(tdq, MA_OWNED);
 	THREAD_LOCK_ASSERT(td, MA_OWNED);
 
+	// Get effect user id for thread's process
+	uid = td->td_proc->p_ucred->cr_uid;
 	pri = td->td_priority;
 	ts = td->td_sched;
 	TD_SET_RUNQ(td);
@@ -467,32 +473,48 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 		ts->ts_flags |= TSF_XFERABLE;
 	}
 	if (pri < PRI_MIN_BATCH) {
-		ts->ts_runq = &tdq->tdq_realtime;
+		if (uid) {
+			ts->ts_runq = &tdq->tdq_realtime_usr;
+		} else {
+			ts->ts_runq = &tdq->tdq_realtime;
+		}
 	} else if (pri <= PRI_MAX_BATCH) {
-		ts->ts_runq = &tdq->tdq_timeshare;
-		KASSERT(pri <= PRI_MAX_BATCH && pri >= PRI_MIN_BATCH,
-			("Invalid priority %d on timeshare runq", pri));
-		/*
-		 * This queue contains only priorities between MIN and MAX
-		 * realtime.  Use the whole queue to represent these values.
-		 */
-		if ((flags & (SRQ_BORROWING|SRQ_PREEMPTED)) == 0) {
-			pri = RQ_NQS * (pri - PRI_MIN_BATCH) / PRI_BATCH_RANGE;
-			pri = (pri + tdq->tdq_idx) % RQ_NQS;
+		if (uid) {
+			ts->ts_runq = &tdq->tdq_timeshare_usr;
+			KASSERT(pri <= PRI_MAX_BATCH && pri >= PRI_MIN_BATCH,
+				("Invalid priority %d on timeshare runq", pri));
+		} else {
+			ts->ts_runq = &tdq->tdq_timeshare;
+			KASSERT(pri <= PRI_MAX_BATCH && pri >= PRI_MIN_BATCH,
+				("Invalid priority %d on timeshare runq", pri));
 			/*
-			 * This effectively shortens the queue by one so we
-			 * can have a one slot difference between idx and
-			 * ridx while we wait for threads to drain.
+			 * This queue contains only priorities between MIN and MAX
+			 * realtime.  Use the whole queue to represent these values.
 			 */
-			if (tdq->tdq_ridx != tdq->tdq_idx &&
-			    pri == tdq->tdq_ridx)
-				pri = (unsigned char)(pri - 1) % RQ_NQS;
-		} else
-			pri = tdq->tdq_ridx;
-		runq_add_pri(ts->ts_runq, td, pri, flags);
-		return;
-	} else
-		ts->ts_runq = &tdq->tdq_idle;
+			if ((flags & (SRQ_BORROWING|SRQ_PREEMPTED)) == 0) {
+				pri = RQ_NQS * (pri - PRI_MIN_BATCH) / PRI_BATCH_RANGE;
+				pri = (pri + tdq->tdq_idx) % RQ_NQS;
+				/*
+				 * This effectively shortens the queue by one so we
+				 * can have a one slot difference between idx and
+				 * ridx while we wait for threads to drain.
+				 */
+				if (tdq->tdq_ridx != tdq->tdq_idx &&
+					pri == tdq->tdq_ridx)
+					pri = (unsigned char)(pri - 1) % RQ_NQS;
+			} else {
+				pri = tdq->tdq_ridx;
+			}
+			runq_add_pri(ts->ts_runq, td, pri, flags);
+			return;
+		}
+	} else {
+		if (uid) {
+			ts->ts_runq = &tdq->tdq_idle_usr;
+		} else {
+			ts->ts_runq = &tdq->tdq_idle;
+		}
+	}
 	runq_add(ts->ts_runq, td, flags);
 }
 
@@ -1325,7 +1347,25 @@ tdq_choose(struct tdq *tdq)
 		    td->td_priority));
 		return (td);
 	}
-
+	
+	td = runq_choose(&tdq->tdq_realtime_usr);
+	if (td != NULL)
+		return (td);
+	td = runq_choose(&tdq->tdq_timeshare_usr);
+	if (td != NULL) {
+		KASSERT(td->td_priority >= PRI_MIN_BATCH,
+		    ("tdq_choose: Invalid priority on user timeshare queue %d",
+		    td->td_priority));
+		return (td);
+	}
+	td = runq_choose(&tdq->tdq_idle_usr);
+	if (td != NULL) {
+		KASSERT(td->td_priority >= PRI_MIN_IDLE,
+		    ("tdq_choose: Invalid priority on user idle queue %d",
+		    td->td_priority));
+		return (td);
+	}
+	
 	return (NULL);
 }
 
@@ -1341,6 +1381,9 @@ tdq_setup(struct tdq *tdq)
 	runq_init(&tdq->tdq_realtime);
 	runq_init(&tdq->tdq_timeshare);
 	runq_init(&tdq->tdq_idle);
+	runq_init(&tdq->tdq_realtime_usr);
+	runq_init(&tdq->tdq_timeshare_usr);
+	runq_init(&tdq->tdq_idle_usr);
 	snprintf(tdq->tdq_name, sizeof(tdq->tdq_name),
 	    "sched lock %d", (int)TDQ_ID(tdq));
 	mtx_init(&tdq->tdq_lock, tdq->tdq_name, "sched lock",
