@@ -463,7 +463,6 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 	TDQ_LOCK_ASSERT(tdq, MA_OWNED);
 	THREAD_LOCK_ASSERT(td, MA_OWNED);
 
-	// Get effect user id for thread's process
 	uid = td->td_proc->p_ucred->cr_uid;
 	pri = td->td_priority;
 	ts = td->td_sched;
