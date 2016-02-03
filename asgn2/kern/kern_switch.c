@@ -237,6 +237,7 @@ runq_init(struct runq *rq)
 	int i;
 
 	bzero(rq, sizeof *rq);
+	rq->rq_tickets = 0;
 	for (i = 0; i < RQ_NQS; i++)
 		TAILQ_INIT(&rq->rq_queues[i]);
 }
@@ -313,6 +314,24 @@ again:
 	goto again;
 }
 
+static __inline int
+runq_findbit_from_nowrap(struct runq *rq, u_char pri)
+{
+	struct rqbits *rqb;
+	int i;
+
+	rqb = &rq->rq_status;
+	for (i = RQB_WORD(pri); i < RQB_LEN; i++)
+		if (rqb->rqb_bits[i]) {
+			pri = RQB_FFS(rqb->rqb_bits[i]) + (i << RQB_L2BPW);
+			CTR3(KTR_RUNQ, "runq_findbit: bits=%#x i=%d pri=%d",
+			    rqb->rqb_bits[i], i, pri);
+			return (pri);
+		}
+
+	return (-1);
+}
+
 /*
  * Set the status bit of the queue corresponding to priority level pri,
  * indicating that it is non-empty.
@@ -343,6 +362,7 @@ runq_add(struct runq *rq, struct thread *td, int flags)
 	pri = td->td_priority / RQ_PPQ;
 	td->td_rqindex = pri;
 	runq_setbit(rq, pri);
+	rq->rq_tickets += td->td_ticket;
 	rqh = &rq->rq_queues[pri];
 	CTR4(KTR_RUNQ, "runq_add: td=%p pri=%d %d rqh=%p",
 	    td, td->td_priority, pri, rqh);
@@ -436,6 +456,36 @@ runq_choose_fuzz(struct runq *rq, int fuzz)
 }
 
 /*
+ * Find the lottery winning process on the run queue.
+ */
+struct thread *
+runq_choose_lottery(struct runq *rq)
+{
+	struct rqhead *rqh;
+	struct thread *td;
+	int pri = 0;
+	u_int ticket_sum = 0;
+	u_int ticket = random_num64 % rq->rq_tickets;
+	
+	while ((pri = runq_findbit_from_nowrap(rq, pri)) != -1) {
+		rqh = &rq->rq_queues[pri];
+		td = TAILQ_FIRST(rqh);
+		KASSERT(td != NULL, ("runq_choose: no thread on busy queue"));
+		TAILQ_FOREACH(td, rqh, td_runq) {
+			ticket_sum += td->td_ticket;
+			if (ticket_sum > ticket) {
+				CTR3(KTR_RUNQ,
+					"runq_choose: pri=%d thread=%p rqh=%p", pri, td, rqh);
+				return (td);
+			}
+		}
+	}
+	CTR1(KTR_RUNQ, "runq_choose: idlethread pri=%d", pri);
+
+	return (NULL);
+}
+
+/*
  * Find the highest priority process on the run queue.
  */
 struct thread *
@@ -500,6 +550,7 @@ runq_remove_idx(struct runq *rq, struct thread *td, u_char *idx)
 		("runq_remove_idx: thread swapped out"));
 	pri = td->td_rqindex;
 	KASSERT(pri < RQ_NQS, ("runq_remove_idx: Invalid index %d\n", pri));
+	rq->rq_tickets -= td->td_ticket;
 	rqh = &rq->rq_queues[pri];
 	CTR4(KTR_RUNQ, "runq_remove_idx: td=%p, pri=%d %d rqh=%p",
 	    td, td->td_priority, pri, rqh);
