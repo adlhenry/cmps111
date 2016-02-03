@@ -381,6 +381,7 @@ runq_add_pri(struct runq *rq, struct thread *td, u_char pri, int flags)
 	KASSERT(pri < RQ_NQS, ("runq_add_pri: %d out of range", pri));
 	td->td_rqindex = pri;
 	runq_setbit(rq, pri);
+	rq->rq_tickets += td->td_ticket;
 	rqh = &rq->rq_queues[pri];
 	CTR4(KTR_RUNQ, "runq_add_pri: td=%p pri=%d idx=%d rqh=%p",
 	    td, td->td_priority, pri, rqh);
