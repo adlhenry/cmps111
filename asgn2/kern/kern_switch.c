@@ -451,16 +451,17 @@ runq_choose_lottery(struct runq *rq)
 	int pri;
 	u_int ticket_sum, ticket;
 	
-	pri = 0;
 	ticket_sum = 0;
 	ticket = arc4random() % rq->rq_tickets;
-	rqh = &rq->rq_queues[pri];
-	TAILQ_FOREACH(td, rqh, td_runq) {
-		ticket_sum += td->td_ticket;
-		if (ticket_sum > ticket) {
-			CTR3(KTR_RUNQ,
-				"runq_choose_lottery: pri=%d thread=%p rqh=%p", pri, td, rqh);
-			return (td);
+	if ((pri = runq_findbit(rq)) != -1) {
+		rqh = &rq->rq_queues[pri];
+		TAILQ_FOREACH(td, rqh, td_runq) {
+			ticket_sum += td->td_ticket;
+			if (ticket_sum > ticket) {
+				CTR3(KTR_RUNQ,
+					"runq_choose_lottery: pri=%d thread=%p rqh=%p", pri, td, rqh);
+				return (td);
+			}
 		}
 	}
 	CTR1(KTR_RUNQ, "runq_choose_lottery: idlethread pri=%d", pri);

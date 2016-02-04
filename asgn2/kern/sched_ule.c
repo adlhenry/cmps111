@@ -1353,17 +1353,17 @@ tdq_choose(struct tdq *tdq)
 		return (td);
 	}
 	
-	td = runq_choose(&tdq->tdq_realtime_usr);
+	td = runq_choose_lottery(&tdq->tdq_realtime_usr);
 	if (td != NULL)
 		return (td);
-	td = runq_choose(&tdq->tdq_timeshare_usr);
+	td = runq_choose_lottery(&tdq->tdq_timeshare_usr);
 	if (td != NULL) {
 		KASSERT(td->td_priority >= PRI_MIN_BATCH,
 		    ("tdq_choose: Invalid priority on user timeshare queue %d",
 		    td->td_priority));
 		return (td);
 	}
-	td = runq_choose(&tdq->tdq_idle_usr);
+	td = runq_choose_lottery(&tdq->tdq_idle_usr);
 	if (td != NULL) {
 		KASSERT(td->td_priority >= PRI_MIN_IDLE,
 		    ("tdq_choose: Invalid priority on user idle queue %d",
