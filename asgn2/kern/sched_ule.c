@@ -458,11 +458,13 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 {
 	struct td_sched *ts;
 	u_char pri;
-	uid_t uid;
+	uid_t UID_MIN, UID_MAX, uid;
 	
 	TDQ_LOCK_ASSERT(tdq, MA_OWNED);
 	THREAD_LOCK_ASSERT(td, MA_OWNED);
-
+	
+	UID_MIN = 1000;
+	UID_MAX = 60000;
 	uid = td->td_proc->p_ucred->cr_uid;
 	pri = td->td_priority;
 	ts = td->td_sched;
@@ -472,13 +474,13 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 		ts->ts_flags |= TSF_XFERABLE;
 	}
 	if (pri < PRI_MIN_BATCH) {
-		if (uid) {
+		if (uid >= UID_MIN && uid < UID_MAX) {
 			ts->ts_runq = &tdq->tdq_realtime_usr;
 		} else {
 			ts->ts_runq = &tdq->tdq_realtime;
 		}
 	} else if (pri <= PRI_MAX_BATCH) {
-		if (uid) {
+		if (uid >= UID_MIN && uid < UID_MAX) {
 			ts->ts_runq = &tdq->tdq_timeshare_usr;
 			KASSERT(pri <= PRI_MAX_BATCH && pri >= PRI_MIN_BATCH,
 				("Invalid priority %d on timeshare runq", pri));
@@ -508,7 +510,7 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 			return;
 		}
 	} else {
-		if (uid) {
+		if (uid >= UID_MIN && uid < UID_MAX) {
 			ts->ts_runq = &tdq->tdq_idle_usr;
 		} else {
 			ts->ts_runq = &tdq->tdq_idle;
@@ -1347,17 +1349,17 @@ tdq_choose(struct tdq *tdq)
 		return (td);
 	}
 	
-	td = runq_choose_lottery(&tdq->tdq_realtime_usr);
+	td = runq_choose(&tdq->tdq_realtime_usr);
 	if (td != NULL)
 		return (td);
-	td = runq_choose_lottery(&tdq->tdq_timeshare_usr);
+	td = runq_choose(&tdq->tdq_timeshare_usr);
 	if (td != NULL) {
 		KASSERT(td->td_priority >= PRI_MIN_BATCH,
 		    ("tdq_choose: Invalid priority on user timeshare queue %d",
 		    td->td_priority));
 		return (td);
 	}
-	td = runq_choose_lottery(&tdq->tdq_idle_usr);
+	td = runq_choose(&tdq->tdq_idle_usr);
 	if (td != NULL) {
 		KASSERT(td->td_priority >= PRI_MIN_IDLE,
 		    ("tdq_choose: Invalid priority on user idle queue %d",
