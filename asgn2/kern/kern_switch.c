@@ -374,6 +374,7 @@ runq_add_pri(struct runq *rq, struct thread *td, u_char pri, int flags)
 		TAILQ_INSERT_TAIL(rqh, td, td_runq);
 	}
 }
+
 /*
  * Return true if there are runnable processes of any priority on the run
  * queue, false otherwise.  Has no side effects, does not modify the run

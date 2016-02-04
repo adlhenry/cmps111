@@ -476,14 +476,17 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 	if (pri < PRI_MIN_BATCH) {
 		if (uid >= USR_UID_MIN && uid < USR_UID_MAX) {
 			ts->ts_runq = &tdq->tdq_realtime_usr;
+			runq_add_pri(ts->ts_runq, td, 0, flags);
 		} else {
 			ts->ts_runq = &tdq->tdq_realtime;
+			runq_add(ts->ts_runq, td, flags);
 		}
 	} else if (pri <= PRI_MAX_BATCH) {
 		if (uid >= USR_UID_MIN && uid < USR_UID_MAX) {
 			ts->ts_runq = &tdq->tdq_timeshare_usr;
 			KASSERT(pri <= PRI_MAX_BATCH && pri >= PRI_MIN_BATCH,
 				("Invalid priority %d on timeshare runq", pri));
+			runq_add_pri(ts->ts_runq, td, 0, flags);
 		} else {
 			ts->ts_runq = &tdq->tdq_timeshare;
 			KASSERT(pri <= PRI_MAX_BATCH && pri >= PRI_MIN_BATCH,
@@ -512,11 +515,12 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 	} else {
 		if (uid >= USR_UID_MIN && uid < USR_UID_MAX) {
 			ts->ts_runq = &tdq->tdq_idle_usr;
+			runq_add_pri(ts->ts_runq, td, 0, flags);
 		} else {
 			ts->ts_runq = &tdq->tdq_idle;
+			runq_add(ts->ts_runq, td, flags);
 		}
 	}
-	runq_add(ts->ts_runq, td, flags);
 }
 
 /* 
