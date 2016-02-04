@@ -36,6 +36,7 @@ __FBSDID("$FreeBSD: releng/10.2/sys/kern/kern_switch.c 244046 2012-12-09 04:54:2
 #include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
+#include <sys/libkern.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/queue.h>
@@ -466,7 +467,7 @@ runq_choose_lottery(struct runq *rq)
 	struct thread *td;
 	int pri = 0;
 	u_int ticket_sum = 0;
-	u_int ticket = random_num64 % rq->rq_tickets;
+	u_int ticket = arc4random() % rq->rq_tickets;
 	
 	while ((pri = runq_findbit_from_nowrap(rq, pri)) != -1) {
 		rqh = &rq->rq_queues[pri];
