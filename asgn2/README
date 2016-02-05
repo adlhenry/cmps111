@@ -1,11 +1,11 @@
 // Author: Adam Henry, adlhenry@ucsc.edu
 
 COMPILE
-	//sudo make -j2 buildkernel -DKERNFAST KERNCONF=MYKERNEL
-	sudo make buildkernel KERNCONF=MYKERNEL
+	//sudo make -j2 buildkernel -DKERNFAST KERNCONF=GENERIC
+	sudo make buildkernel
 	
 INSTALL
-	sudo make installkernel KERNCONF=MYKERNEL
+	sudo make installkernel
 	sudo shutdown -r now
 	
 TEST
