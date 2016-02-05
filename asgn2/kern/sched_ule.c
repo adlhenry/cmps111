@@ -1411,7 +1411,7 @@ tdq_choose(struct tdq *tdq)
 static void
 tdq_setup(struct tdq *tdq)
 {
-	
+
 	if (bootverbose)
 		printf("ULE: setup cpu %d\n", TDQ_ID(tdq));
 	runq_init(&tdq->tdq_realtime);
