@@ -448,6 +448,32 @@ sched_shouldpreempt(int pri, int cpri, int remote)
 	return (0);
 }
 
+#define RNDPOOL_LEN (10)
+int tdq_random_i;
+u_long tdq_random[RNDPOOL_LEN];
+
+void tdq_random_gen(void);
+u_long tdq_random_get(void);
+
+void
+tdq_random_gen()
+{
+	int i;
+	tdq_random_i = 0;
+	for (i = 0; i < RNDPOOL_LEN; i++) {
+		tdq_random[i] = random();
+	}
+}
+
+u_long
+tdq_random_get()
+{
+	if (tdq_random_i == RNDPOOL_LEN) {
+		tdq_random_i = 0;
+	}
+	return tdq_random[tdq_random_i];
+}
+
 /*
  * Add a thread to the actual run-queue.  Keeps transferable counts up to
  * date with what is actually on the run-queue.  Selects the correct
@@ -477,6 +503,7 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 		if (uid >= USR_UID_MIN && uid < USR_UID_MAX) {
 			ts->ts_runq = &tdq->tdq_realtime_usr;
 			runq_add_pri(ts->ts_runq, td, 0, flags);
+			tdq_random_gen();
 		} else {
 			ts->ts_runq = &tdq->tdq_realtime;
 			runq_add(ts->ts_runq, td, flags);
@@ -487,6 +514,7 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 			KASSERT(pri <= PRI_MAX_BATCH && pri >= PRI_MIN_BATCH,
 				("Invalid priority %d on timeshare runq", pri));
 			runq_add_pri(ts->ts_runq, td, 0, flags);
+			tdq_random_gen();
 		} else {
 			ts->ts_runq = &tdq->tdq_timeshare;
 			KASSERT(pri <= PRI_MAX_BATCH && pri >= PRI_MIN_BATCH,
@@ -516,6 +544,7 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 		if (uid >= USR_UID_MIN && uid < USR_UID_MAX) {
 			ts->ts_runq = &tdq->tdq_idle_usr;
 			runq_add_pri(ts->ts_runq, td, 0, flags);
+			tdq_random_gen();
 		} else {
 			ts->ts_runq = &tdq->tdq_idle;
 			runq_add(ts->ts_runq, td, flags);
@@ -1333,7 +1362,8 @@ static struct thread *
 tdq_choose(struct tdq *tdq)
 {
 	struct thread *td;
-
+	u_long random;
+	
 	TDQ_LOCK_ASSERT(tdq, MA_OWNED);
 	td = runq_choose(&tdq->tdq_realtime);
 	if (td != NULL)
@@ -1353,17 +1383,18 @@ tdq_choose(struct tdq *tdq)
 		return (td);
 	}
 	
-	td = runq_choose_lottery(&tdq->tdq_realtime_usr);
+	random = tdq_random_get();
+	td = runq_choose_lottery(&tdq->tdq_realtime_usr, random);
 	if (td != NULL)
 		return (td);
-	td = runq_choose_lottery(&tdq->tdq_timeshare_usr);
+	td = runq_choose_lottery(&tdq->tdq_timeshare_usr, random);
 	if (td != NULL) {
 		KASSERT(td->td_priority >= PRI_MIN_BATCH,
 		    ("tdq_choose: Invalid priority on user timeshare queue %d",
 		    td->td_priority));
 		return (td);
 	}
-	td = runq_choose_lottery(&tdq->tdq_idle_usr);
+	td = runq_choose_lottery(&tdq->tdq_idle_usr, random);
 	if (td != NULL) {
 		KASSERT(td->td_priority >= PRI_MIN_IDLE,
 		    ("tdq_choose: Invalid priority on user idle queue %d",
@@ -2440,6 +2471,7 @@ sched_add(struct thread *td, int flags)
 	 */
 	if (PRI_BASE(td->td_pri_class) == PRI_TIMESHARE)
 		sched_priority(td);
+	if (td->td_ticket < 1) td->td_ticket = 500;
 #ifdef SMP
 	/*
 	 * Pick the destination cpu and if it isn't ours transfer to the

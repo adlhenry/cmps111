@@ -36,7 +36,6 @@ __FBSDID("$FreeBSD: releng/10.2/sys/kern/kern_switch.c 244046 2012-12-09 04:54:2
 #include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
-#include <sys/libkern.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/queue.h>
@@ -444,7 +443,7 @@ runq_choose_fuzz(struct runq *rq, int fuzz)
  * Find the lottery winning process on the run queue.
  */
 struct thread *
-runq_choose_lottery(struct runq *rq)
+runq_choose_lottery(struct runq *rq, u_long random)
 {
 	struct rqhead *rqh;
 	struct thread *td;
@@ -452,7 +451,7 @@ runq_choose_lottery(struct runq *rq)
 	u_int ticket_sum, ticket;
 	
 	ticket_sum = 0;
-	ticket = arc4random() % rq->rq_tickets;
+	ticket = random % rq->rq_tickets;
 	if ((pri = runq_findbit(rq)) != -1) {
 		rqh = &rq->rq_queues[pri];
 		TAILQ_FOREACH(td, rqh, td_runq) {
