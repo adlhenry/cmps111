@@ -1,7 +1,86 @@
 // Author: Adam Henry, adlhenry@ucsc.edu
 
 SYNOPSIS
-
+	Lottery Scheduler - A simple lottery scheduler for freeBSD
+	
+	Thread Choosing Algorithm
+		The scheduler assigns tickets to each thread starting with 500
+		tickets. Then the scheduler picks a random number between 0
+		abd T-1, where T is the total number of tickets in a run queue.
+		The scheduler iterates the queue counting the number of tickets
+		in threads covered until it exceeds the random number. When the
+		ticket count is larger than the random number the thread which
+		caused the condition is chosen to run. The thread is removed
+		from the queue and allowed to run. When the thread uses its
+		quantum, it is placed back on the queue and the steps repeat.
+		
+	Ticket Allocation Policy #1
+		
+		
+	Ticket Allocation Policy #2
+		
+	
 DATA
-    
+sched_ule.c
+	tdq_realtime_usr - user queue for realtime threads
+	tdq_timeshare_usr - user queue for timeshare threads
+	tdq_idle_usr - user queue for idle threads
+	RNDPOOL_LEN - length of tdq_random, i.e., the size of the
+				  random number pool
+	tdq_random - an array of random unsigned 64-bit numbers
+	tdq_random_i - index of a number in the random number pool
+	USR_UID_MIN - the minimum user id for threads in a user run queue
+	USR_UID_MAX = the maximum user id for threads in a user run queue
+	uid - the effective user id of the thread's parent process
+	
+runq.h
+	rq_tickets - the current total ticket count for a run queue
+	
+proc.h
+	td_ticket - the current ticket number for a thread
+	
 FUNCTIONS
+sched_ule.c
+	tdq_random_gen()
+		purpose - populate the random number pool
+		inputs - none
+		outputs - generates the random numbers in tdq_random
+		assumptions - random() was preceeded by srandom()
+		
+	tdq_random_get()
+		purpose - get a random number from the random number pool
+		inputs - none
+		outputs - returns a random 64-bit unsigned integer from
+				  tdq_random as a circular array
+		assumptions - tdq_random_gen() was already called
+		
+	tdq_runq_add()
+		purpose - decides whether a thread belongs in a realtime,
+				  timeshare, or idle queue. Also determines whether
+				  a thread is user thread or a system thread
+		inputs - struct tdq pointer, struct thread pointer, and an integer
+		outputs - adds a thread to its run queue
+		assumptions - all input pointers are non-null and a thread has an
+					  identifying parent process
+		
+	tdq_runq_choose()
+		purpose - choose a thread from run queues in the following
+				  order: realtime, timeshare, idle. User queues
+				  are checked after system queues
+		inputs - struct tdq pointer
+		outputs - returns a thread if there is a busy queue and NULL
+				  if no busy queues were found
+		assumptions - struct tdq pointer is non-null
+		
+kern_switch.c
+	runq_choose_lottery()
+		purpose - iterate a run queue and use the lottery scheduling
+				  algorithm to pick a thread in the queue
+		inputs - a struct runq pointer and an unsigned 64-bit integer
+		outputs - returns the thread which won the lottery or NULL if
+				  the run queue was empty
+		assumptions - the pointer to the struct runq is non-null, and 
+					  if threads are ready to run they will be in the
+					  run queue
+					  rq_tickets and td_ticket reflect total ticket
+					  count and ticket number per thread, repectively

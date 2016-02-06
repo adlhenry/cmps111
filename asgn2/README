@@ -1,5 +1,8 @@
 // Author: Adam Henry, adlhenry@ucsc.edu
 
+TEAM MEMBERS
+	Adam Henry
+	
 COMPILE
 	//sudo make -j2 buildkernel -DKERNFAST KERNCONF=GENERIC
 	sudo make buildkernel
