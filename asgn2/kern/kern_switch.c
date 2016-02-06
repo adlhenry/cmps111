@@ -72,6 +72,7 @@ static int kern_sched_preemption = 0;
 #endif
 SYSCTL_INT(_kern_sched, OID_AUTO, preemption, CTLFLAG_RD,
     &kern_sched_preemption, 0, "Kernel preemption enabled");
+void _(struct runq *rq);
 
 /*
  * Support for scheduler stats exported via kern.sched.stats.  All stats may
@@ -171,6 +172,18 @@ retry:
 
 	TD_SET_RUNNING(td);
 	return (td);
+}
+
+void
+_(struct runq *rq)
+{
+	rq->rq_tickets = 0;
+	if ((pri = runq_findbit(rq)) != -1) {
+		rqh = &rq->rq_queues[pri];
+		TAILQ_FOREACH(td, rqh, td_runq) {
+			rq->rq_tickets += td->td_ticket;
+		}
+	}
 }
 
 /*
@@ -447,12 +460,12 @@ runq_choose_lottery(struct runq *rq, u_long random)
 {
 	struct rqhead *rqh;
 	struct thread *td;
-	int pri;
+	int pri; _(rq);
 	u_int ticket_sum, ticket;
 	
-	ticket_sum = 0;
-	ticket = random % rq->rq_tickets;
 	if ((pri = runq_findbit(rq)) != -1) {
+		ticket_sum = 0;
+		ticket = random % rq->rq_tickets;
 		rqh = &rq->rq_queues[pri];
 		TAILQ_FOREACH(td, rqh, td_runq) {
 			ticket_sum += td->td_ticket;
