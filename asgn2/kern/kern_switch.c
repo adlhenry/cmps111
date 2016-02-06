@@ -173,7 +173,7 @@ retry:
 	return (td);
 }
 
-void
+static __inline void
 _(struct runq *rq)
 {
 	struct rqhead *rqh;
