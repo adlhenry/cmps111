@@ -72,7 +72,6 @@ static int kern_sched_preemption = 0;
 #endif
 SYSCTL_INT(_kern_sched, OID_AUTO, preemption, CTLFLAG_RD,
     &kern_sched_preemption, 0, "Kernel preemption enabled");
-void _(struct runq *rq);
 
 /*
  * Support for scheduler stats exported via kern.sched.stats.  All stats may
@@ -177,13 +176,12 @@ retry:
 void
 _(struct runq *rq)
 {
+	struct rqhead *rqh;
+	struct thread *td;
 	rq->rq_tickets = 0;
-	if ((pri = runq_findbit(rq)) != -1) {
-		rqh = &rq->rq_queues[pri];
-		TAILQ_FOREACH(td, rqh, td_runq) {
-			rq->rq_tickets += td->td_ticket;
-		}
-	}
+	rqh = &rq->rq_queues[0];
+	TAILQ_FOREACH(td, rqh, td_runq)
+		rq->rq_tickets += td->td_ticket;
 }
 
 /*
