@@ -1,0 +1,22 @@
+// Author: Adam Henry, adlhenry@ucsc.edu
+
+MY CONTRIBUTION
+	I wrote the design doc, README, and all code for assignment 2.
+	As the sole contributer, I was also responsible for testing
+	and compiling the lottery scheduler on my machine.
+	
+	I implemented a version of lottery scheduling using threads
+	to track their ticket and run queues that kept a total ticket
+	counter for their threads. I wrote the lottery choosing algorithm
+	inside to return the winning thread from a user run queue. The
+	algorithm iterates the queue and returns a thread when the ticket
+	count exceeds the the random ticket.
+	
+	I edited the ULE scheduler functions tdq_add and tdq_choose. tdq_add
+	checks if thread belongs to a system or user process and places it in
+	the appropriate queue. Threads are further sorted by real-time,
+	timeshare, and idle classification. tdq_choose checks run queues in
+	the following order: real-time, timeshare, and idle. It checks system
+	queues before user queues.
+	
+	[STUFF ABOUT TICKET ALLOCATION POLICIES]
