@@ -15,11 +15,26 @@ SYNOPSIS
 		quantum, it is placed back on the queue and the steps repeat.
 		
 	Ticket Allocation Policy #1
+		A thread's ticket number is set to a constant divided by the
+		thread's priority level plus one. Interactive threads have a
+		constant of 20000 while timeshare threads have constant of
+		50000. This constant is matched to the relative range of 
+		priorities for interactive and timeshare threads respectively.
 		
+		A thread's priority number encapsulates the interactivity score
+		of a thread and is linearly weighed against its nice number.
+		This makes a thread's priority an ideal factor to scale its
+		ticket number.
 		
 	Ticket Allocation Policy #2
+		The thread's ticket number is calculated on a range between
+		1 and 100000 (roughly, some numbers are lost on the top and
+		bottom end). The thread's priority is used to scale the 
+		ticket number between these bounds for both interactive and
+		timeshare threads. The numbers 1 to 100000 can happen on any
+		run queue, which means a thread's ticket based "priority level"
+		is unique to its run queue unlike the priority number.
 		
-	
 DATA
 sched_ule.c
 	tdq_realtime_usr - user queue for realtime threads
@@ -72,6 +87,14 @@ sched_ule.c
 				  if no busy queues were found
 		assumptions - struct tdq pointer is non-null
 		
+	sched_priority()
+		purpose - scales a thread's priority and ticket number
+				  according to its calculated interactivity score
+		inputs - struct thread pointer
+		outputs - adjusts the thread's base priority and scales its
+				  ticket number on this priority
+		assumptions - struct thread pointer is non-null
+		
 kern_switch.c
 	runq_choose_lottery()
 		purpose - iterate a run queue and use the lottery scheduling
@@ -84,3 +107,22 @@ kern_switch.c
 					  run queue
 					  rq_tickets and td_ticket reflect total ticket
 					  count and ticket number per thread, repectively
+		
+	runq_add_pri()
+		purpose - add a thread to a run queue at the specified priority
+				  priority index, increment the ticket count
+		inputs - struct runq pointer, struct thread pointer,
+				 unsigned char, integer
+		outputs - inserts the thread into the run queue and increments
+				  the run queue total ticket count
+		assumptions - runq and thread pointers are non-null
+		
+	runq_remove_idx()
+		purpose - remove a thread from a run queue and decrement the
+				  ticket count
+		inputs - struct runq pointer, struct thread pointer,
+				 unsigned char
+		outputs - removes the thread from the run queue and decrements
+				  the run queue total ticket count
+		assumptions - runq and thread pointers are non-null, the thread
+					  is in the run queue specified by the runq pointer

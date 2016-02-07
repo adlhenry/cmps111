@@ -452,10 +452,7 @@ sched_shouldpreempt(int pri, int cpri, int remote)
 int tdq_random_i;
 u_long tdq_random[RNDPOOL_LEN];
 
-void tdq_random_gen(void);
-u_long tdq_random_get(void);
-
-void
+static __inline void
 tdq_random_gen()
 {
 	int i;
@@ -465,7 +462,7 @@ tdq_random_gen()
 	}
 }
 
-u_long
+static __inline u_long
 tdq_random_get()
 {
 	if (tdq_random_i == RNDPOOL_LEN) {
