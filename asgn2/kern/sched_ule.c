@@ -1582,11 +1582,16 @@ sched_priority(struct thread *td)
 	 * score.  Negative nice values make it easier for a thread to be
 	 * considered interactive.
 	 */
+	u_int ticket_incr;
+	td->td_ticket = 100000;
 	score = imax(0, sched_interact_score(td) + td->td_proc->p_nice);
 	if (score < sched_interact) {
 		pri = PRI_MIN_INTERACT;
 		pri += ((PRI_MAX_INTERACT - PRI_MIN_INTERACT + 1) /
 		    sched_interact) * score;
+		//td->td_ticket = (20000 / (pri + 1));
+		ticket_incr = (td->td_ticket / (PRI_MAX_INTERACT - PRI_MIN_INTERACT));
+		td->td_ticket -= ((pri - PRI_MIN_INTERACT) * ticket_incr);
 		KASSERT(pri >= PRI_MIN_INTERACT && pri <= PRI_MAX_INTERACT,
 		    ("sched_priority: invalid interactive priority %d score %d",
 		    pri, score));
@@ -1596,6 +1601,9 @@ sched_priority(struct thread *td)
 			pri += min(SCHED_PRI_TICKS(td->td_sched),
 			    SCHED_PRI_RANGE - 1);
 		pri += SCHED_PRI_NICE(td->td_proc->p_nice);
+		//td->td_ticket = (50000 / (pri + 1));
+		ticket_incr = (td->td_ticket / (PRI_MAX_BATCH - PRI_MIN_BATCH));
+		td->td_ticket -= ((pri - PRI_MIN_BATCH) * ticket_incr);
 		KASSERT(pri >= PRI_MIN_BATCH && pri <= PRI_MAX_BATCH,
 		    ("sched_priority: invalid priority %d: nice %d, " 
 		    "ticks %d ftick %d ltick %d tick pri %d",
