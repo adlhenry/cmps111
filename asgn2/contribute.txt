@@ -2,7 +2,7 @@
 
 MY CONTRIBUTION
 	I wrote the design doc, README, and all code for assignment 2.
-	As the sole contributer, I was also responsible for testing
+	As the sole contributor, I was also responsible for testing
 	and compiling the lottery scheduler on my machine.
 	
 	I implemented a version of lottery scheduling using threads
@@ -19,4 +19,10 @@ MY CONTRIBUTION
 	the following order: real-time, timeshare, and idle. It checks system
 	queues before user queues.
 	
-	[STUFF ABOUT TICKET ALLOCATION POLICIES]
+	I implemented a ticket allocation policy which scales tickets on an
+	inverse relation to the priority level. I also wrote another policy
+	which scales tickets uniformly across their maximum range for both
+	interactive and timeshare threads. I modified the sched_priority()
+	function to use these policies, sched_priority() is called by
+	multiple functions including sched_nice() which responds to the 
+	nice() system call.
