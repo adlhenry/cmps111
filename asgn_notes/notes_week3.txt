@@ -1,0 +1,150 @@
+1/20/16:
+	processes need to access resources in reasonable order
+	two resource types:
+		preemptable resources - can be taken away from a process with no ill effects
+		nonpreemptable resources - will cause the process to fail if taken away
+	sequence of events required to use a resource
+		request the resource
+		use the resource
+		release the resource
+	can't use the resource if request is denied
+		requesting process can:
+			block and wait for resource
+			continue (if possible) without it: maybe use alternate resource
+			process fails with error code
+	deadlocks occur when:
+		- processes are granted exclusive access to devices or
+		  software constructs (resources)
+		
+		- each deadlocked process needs a resource held by another
+		  deadlocked process
+	
+	deadlock definition:
+		A set of processes is deadlocked if each process in the set is waiting for
+		event that only another process in the set can cause
+		Usually the event is release of currently held resource
+		In deadlock, non of the processes can
+			run
+			release resources
+			be awakened
+	four conditions for deadlock:
+		mutual exclusion
+		hold and wait
+		no preemption
+		circular wait
+		
+	ostrich algorithm
+		ignore deadlock
+		reasonable if
+			deadlocks occur rarely
+			cost of prevention is high
+		UNIX and Windows take this approach
+			resources are plentiful
+			deadlocks are rare over these resources
+			deadlocks typically handled by rebooting
+	
+	detect deadlocks using graphs
+		process holdings and requests in the table and in the graph
+		graph contains cycle => deadlock
+		not all process are deadlocked
+	deadlock detection
+		use depth first search on resource graph
+		
+	recovering from deadlock
+		recovery through preemption
+			take resource from some other process
+		recovery through rollback
+			checkpoint a process periodically
+			use saved state to restart the process if it's in a deadlock
+			may present problem if the process affects a lot of "external" things
+		recovery through killing process
+			kill a process in deadlock cycle
+			other processes can get its resources
+			try to choose process that can be rerun from the start
+			
+	preventing deadlock:
+		ensure at least one of deadlock conditions never occurs
+			mutual exclusion
+			circular wait
+			hold and wait
+			no preemption
+	
+	eliminate mutual exclusion
+		some devices can be spooled
+			only printer daemon uses printer resource
+			this eliminates deadlock for printer
+		not all devices can be spooled
+		avoid assigning resource when not absolutely necessary
+		as few processes as possible actually claim the resource
+	
+	eliminate hold and wait
+		require processes to request resources before starting
+		this can present problems
+			process may not know required resources at run start
+			ties up resources
+		variation - process must give up all resources before making new request
+		
+	eliminate "no preemption"
+		usually not a viable option
+		may work for some resources
+			take memory pages and suspend process
+			process can resume
+	
+1/22/16:
+	eliminate circular wait
+		assign an order to resources
+		always acquire resources in numerical order
+		circular wait is prevented
+			a process holding resource n can't wait for
+			resources m if m < n
+	freeBSD
+		what resources at issue
+			locks and semaphores: one holder at a time
+			physical resources: not typically a concern
+				- millions of pages
+				- limited resources are spooled
+			goal: prevent deadlock
+				mechanism must be low-cost
+		deadlock prevention
+			mutual exclusion - spool
+			hold and wait - request all resources intially
+		two-pahse locking
+			phase one
+				process tries to lock data it needs on at a time
+				if data found lcoked start over
+			phase two
+				perform updates
+				release locks
+			often used in databases
+		if a process can acquire all resources it needs then at least
+		that process can finish and release its resources
+		this way at least some processes can continue to run
+		
+		banker's algorithm for single resource
+			before grant request, ensure a sequence exists that allows all processes
+			to complete
+			use deadlock detection algorithm
+			can be slow: must be done on each request
+		
+		starvation
+			algorithm to allocate a resource
+				give resource to shortest job first
+			works great for multiple short jobs
+			may cause long jobs be postponed indefinitely
+			solution
+				first-come, first-serve policy
+			starvation can lead to deadlock
+				process starved for resource can be holding resources
+				if resources aren't used and released in a timely fashion,
+				shortage could lead to deadlock
+		livelock
+			sometimes, processes can run, but no make progress
+			example 1
+				P0 gets A, P1 gets B
+				each sees deadlock incoming
+				P0 drops A, P1 drops B
+				repeat
+			example 2
+				ethernet collision, wait try again, many process wait exact
+				amount of time
+		

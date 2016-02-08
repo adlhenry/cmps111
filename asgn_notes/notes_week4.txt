@@ -1,0 +1,294 @@
+1/25/16:
+	Why IPC
+	Each process operates sequentially
+		process navigate critical regions when sharing data
+		maintaining proper sequence of actions in multiple processes
+	Same issues apply to the threads
+		threads share same address space
+	
+	bounded buffer problem
+		buffer allows loose coupling between producer and consumer processes
+		atomic instructions may not occur in a predictable order
+		
+	Data racing
+		Processes share memory
+		Can't guarantee that read followed by write is atomic
+		Causes erroneous results
+		
+	Critical regions
+		use critical regions to provide mutual exclusion and help fix race
+		conditions
+		four conditions must hold to provide mutual exclusion
+			1. no two processes may simultaneously be in critical region
+			2. no assumptions may be made about speeds or number of CPUs
+			3. no process running outside its critical region may block 
+			   another process
+			4. a process may not wait forever to enter its critical region
+			
+	strict alternation
+		use shared variable to keep track of whose turn it is
+		waiting process continually reads the variable to see if it can proceed
+		avoids race conditions but doesn't satisfy criterion 3 for critical regions
+		need to make sure that processes don't depend on each other's speed
+		
+	bakery algorithm for many processes
+		processes ordered by ticket number and process id
+		this way processes are chosen to enter critical region
+		
+	hardware synchronization
+		prior methods somewhat complex and require busy waiting (use CPU)
+		several hardware methods
+			test and set: test a variable and set it in one instruction
+			atomic swap: switch register and memory in one instruction
+			turn off interrupts: process won't be switched out unless it
+			asks to be suspended
+	
+	eliminate busy waiting
+		semaphores - synchronizations mechanism that doesn't require busy waiting
+		during entire critical section
+		implementation
+			semaphore S accessed by two atomic operations
+			down(S): while (S <= 1){}; S <- S - 1;
+			up(S): S <- S + 1;
+	
+	critical sections using semaphores
+		define class called Semaphore
+		
+	Semaphores with blocking
+		assume two operations
+			sleep() suspends current process
+			wakeup(P) allows process P to resume execution
+	
+	Semaphores for general synchronization
+		we want to execute B in P1 only after A execute in P0
+			use semaphore initialized to 0
+			use up() to notify P1 at the appropriate time
+		called rendezvous
+		
+	Monitors
+		A monitor is high-level synchronization primitive
+			has multiple entry points
+			only one process may be monitor at any time
+	
+	Condition variables in monitor
+		how can process wait inside a monitor?
+		wait() suspend process until signaled
+		signal() wake up exactly one process waiting on this condition variable
+		
+	Monitor semantics
+		Problem: P signals on condition variable X in monitor M, waking Q
+			both can't be active in the monitor at the same time
+		Mesa semantics
+		Hoare semantics
+		
+	Locks and condition variables
+		provide monitor support using special data types and procedures
+		
+	Message passing
+		synchronize processes by exchanging messages
+		two primitives
+			send
+			receive
+			both can specify a "channel" to use
+		
+	Barriers
+		processes wait at a barrier until all processes arrive
+		after all processes arrive they can all proceed
+		may be implemented using locks and  condition variables
+		
+1/27/16:
+	Reader-writers problem
+		shared variables: nreaders, mutex(1), writing(1)
+		Reader Process
+			mutex down
+			nreader++
+			wait for 1st reader-writers
+			mutex up
+			read stuff
+			mutex downn
+			readers--
+			signal if last reader
+			mutex up
+		Writer process
+			write down
+			write stuff
+			write up
+	Dining philosophers
+		N philosohpers around table, N chopsticks
+		Each philosopher needs two chopsticks
+		soultion 1
+			Use a semaphore for each chopstick
+			philosopher gets chopstick to right and left eats
+			puts down chopsticks
+			Potiential problems: deadlock, fairness
+		solution 2
+			use semaphore for each chopstick
+			philosopher gets lower then higher numbered chopstick
+			eats
+			puts down chopsticks
+			potential problems: deadlock, fairness
+		solution 3
+			use locks to avoid deadlock
+	Sleepy barber problem
+		wakes up only to cut hair
+		customers wait in chairs till barber chair free
+		limited space
+		leave if no space
+		soultion use semaphores for customers and barbers and locks
+		Ideal world
+		memory fast and large
+		non-volatile
+	Real world
+		memory fast
+		memory large
+		no two at the same time
+	Two pretend the ideal world exists
+		use memory heirarchy
+		different levels of memory
+		some small and fast (cache)
+		some large and slow (disk storage)
+		cache: L1, L2, L3
+		main memory
+		disk
+		memory manager handles the memory hierarchy
+	Basic memory management
+		components incluse
+			operating system
+			single process
+		memory protection
+		allow OS changes
+		no swaping or paging
+	Fixed partitions
+		divide memory into fixed spaces
+		assign a process to a space when it's free
+		mechanisms
+			separate input queues for each partitions
+			single input queue - better to optimize CPU usage
+	How many processes
+		several memory partions
+		lots of processes wanting to use the CPU
+		tradeoff
+		more proceses utilize the CPU better
+		fewer processes use less memory
+	Modeling multi programing
+		more I/O waiting means less processor utilization
+		at 20% I/O wait, 3-4 process fully utilize CPU
+		at 80% I/O wait, 10 processes aren't enough
+		means OS should have more processes if they're I/O
+		more processes => memory management and protection
+	Multiprogramed system performance
+		arrival and work requirements for 4 jobs
+		memory needs two things for mutliprograming
+			relocation
+			protection
+		sequence of events as jobs arrive and finish
+			numbers show amount of CPU times jobs get each interval
+			more processes: better utilization, less time per process
+		Memory and mutilprograming
+		the OS cannot be certain where a program will be loaded
+		memory
+
+1/29/16:
+	Eliminate busy waiting
+		allow processes to sleep while they wait to execute
+		priority inversion
+		soultion: semaphores
+			synchonization mechanism that doesn't require busy waiting
+			during entire critical section
+		implementation
+			semaphore S accessed by two ATOMIC operations
+				down(S) - while (S <= 0) {}; S-=1;
+				up(S) - S+=1;
+	Semaphores with blocking
+		sleep() - suspends current process
+		wakeup(P) - resumes process P's execution
+		semaphore is class
+			track value of semaphore
+			keep list of waiting processes
+		operations atomic
+	Semaphores for general synchronization
+		want to execute B in P1 only after A in P0
+		use semaphore intialized to 0
+		use up() to notify P1 when to run
+	Types of semaphores
+		counting semaphores
+		binary semaphores
+		counting semaphore
+			valure range over unrestricted range
+		binary semaphore
+			1 - semaphore is avaible
+			0 - process acquired semaphore (unavailable)
+		possible to implement one type using the other
+	Monitor
+		other kind of synchonization primitive
+		multiple entry points
+		only one process may be in monitor at any time
+		enforces mutual exclusion
+		monitors provided by high-lvel language
+		can be implemented using semaphores
+	Monitor semantics
+		mesa semantics
+			signaling process P continues first
+			Q resumes when P leaves monitor
+			seems more logical: why suspend P when it signals
+		hoare semantics
+			awakened process Q continues first
+			P resumes when Q leaves the monitor
+			may be better: condition that Q wanted may no longer
+			hold when P leaves the monitor
+	Locks and condition variables
+		locks
+			acquire lock -> enter monitor
+			release lock -> exit monitor
+		condtion vairables
+			each condition variable associated with exactly one lock
+			lock held to use condition variable
+			waiting on a condition variable releases lock implicitly
+			returning from wait() on condtion variable reacquires the
+			lock
+	Memory and mutilprograming
+		memory needs two things for mutliprograming
+			relocation
+			protection
+		the OS cannot be certain where a program will be loaded in
+		memory
+			variables and procedures can't use absolute locations
+			in memory
+		the OS must keep processes' memory separate
+			protect a process from other processes reading
+			or modifying its own memory
+			protect a process from modifying its own memory in
+			undesirable ways (e.g., modifying instruction memory)
+	Base and limit registers
+		special CPU registers: base and limit
+			access to the registers limited to system mode
+			registers contain
+			base - start of process's memory partitions
+			limit - length of the process's memory partition
+		address generation
+			physical address - location in actual memory
+			logical adress - location from the process's point
+			of view
+			physical adress = base + logical adress
+			logical adress larger than limit => error
+	Swapping
+		memory allocation changes as
+			processes come into memory
+			processes leave memory
+				swapped to disk
+				complete execution
+			gray regions are unused
+	Swapping: leaving room to grow
+		need to allow programs to grow
+			allocate more memory for data
+			larger stack
+		handled by allocating more space than necessary
+			inefficient
+			may allow memory overflow
+	Tracking memory usage, bitmaps
+		keep track of free / allocated memory regions with a bitmap
+			one bit in mao corresponds to a fixed-size region of memory
+			bitmap is a constant size for a given amount of memory
+			regardless of how much is allocated at a time
+		chunk size determines efficiency
+			at 1 bit per 4KB chunk, we need just 256 bits per memory MB	

@@ -1,0 +1,54 @@
+1/4/16:
+	Labs in Engineering 2 194
+		Wednesday 11-12:10PM
+		Friday 8-9:10AM
+	GIT: git2.soe.ucsc.edu
+	Textbook: Modern Operating Systems, 4th ed.
+	+ FreeBSD Operating System, 2nd ed.
+	First assignment pass/no pass/no
+	
+	Submit projects using git
+		- Design doc
+		- Code and Makefile
+		- Test files
+		- README
+	
+	Notes submitted by 5:00PM Saturday
+	Academic honesty paper submitted
+	
+1/6/16:
+	Computer science revolves around small and large numbers
+	Get good at "feeling" these numbers
+	Use to ways to guess and answer and cross check
+	Learn metric prefixs: kilo, milli, giga, etc.
+	
+	Estimate things in powers of ten
+	Convert powers of two to powers of ten
+	
+	Computers started with punch cards and grew with tapes
+	then came disks which hold more data and allowed concurrent
+	processes
+	
+	Even though multiple programs could run they weren't interative
+	until data became cheaper and better managed
+	
+1/8/16:
+	Magnetic discs with sectors on them allow modern programs
+	to "virtually" store lots of data
+	Discs are really slow!
+	
+	Memory hiearchy was invented to give the illusion of infinitely
+	large and fast memory
+	
+	Memory at the top (registers) is less then a ns fast while memory at the bottom
+	(disc) suffers ms response times
+	
+	The way data is transfered within the heirarchy is what virtual memory
+	is about
+	
+	Flash Translation Layer (FTL) lets a flash memory mask its internal
+	behavior as though it were a disc
+	Flash reads or writes in blocks of pages (reads faster than writes)
+
+	Jokes, jokes, jokes
+	

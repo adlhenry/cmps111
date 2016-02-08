@@ -1,0 +1,208 @@
+1/11/16:
+	Operating systems separates process address space in memory
+	Some space for data and some for the program
+	instruction vs data address space
+	
+	Disk 10^6 times slower than memory
+	Data request sent to interrupt controller and then to disk
+	controller, then to disk and the returned signal goes back up
+	the chain
+	
+	Process: a program in execution
+		address space - memory the program can use
+		state - registers, program counter, and stack pointer
+	OS has a process table
+	Processes can create other processes
+		process tree tracks these relationships
+	Program is static
+	
+	UNIX process
+		text - program code
+		data - program data
+			statically declared variables
+			areas allocated by malloc() or new
+		stack
+			automatic variables
+			procedure call information
+	
+	Hierarchical file systems
+	Interprocess communication
+		network
+		pipe (special file) - queue
+	System calls
+		OS runs in privileged mode (supervisor or system mode)
+		Some processes only allowed in privileged mode
+			device access / memory allocation
+		User programs run in user mode (limited operations)
+		OS does the file management, etc
+		services for the user programs
+		
+		System calls only allowed if the OS allows the program to
+		do so
+		Make system call
+			programs push arguments
+			library sets up trap, call OS
+			OS handle system call
+			control returns to library
+			library returns to user program
+
+1/13/16:
+	Simple shell is a loop with a prompt, a read, and a
+	command executer with a wait()
+	
+	OS
+		memory management
+		process management
+		device drivers
+		file system
+	
+	Different OS types
+		monolithic
+		layered
+		microkernel
+		virtual machines
+		
+	Monolithic OS Structure (e.g. Linux)
+		one big program
+		can be modular
+			pieces can be added dynamically
+	
+	Layered OS
+		cpu support privilege layers 
+			user code outermost layer
+		layers provide security
+			outer layers only move in through gates
+		
+	Microkernels (client-server) - e.g. MINIX
+		processes don't share memory
+		communication via message-passing
+	
+	Virtual Machine
+		first used in VM/370 with CMS
+		VMware and VirtualBox
+		guest OS can crash without harming host
+		Type 1 hypervisor
+			runs on bare hardware
+			manages resources between guest OS's
+			may provide simple OS-like services
+		Type 2 hypervisor
+			runs as process in host OS
+			may use host OS services
+		virtual machines is easy to store and relocate
+		increase reliability (switch hardware easily)
+		shared hardware with illusion of single computer
+		
+	Process
+		code, data, stack
+		program state - CPU registers, program counter, stack pointer
+		only one process at a time in CPU
+		
+		process model
+			multiple processes run squentially
+			only one active at a time
+			only true for single-CPU systems
+			
+		processes are created
+			-boot up OS -process creation system call
+			system calls come from
+			user request new process (system call from user shell)
+			another running process: - user program, system daemon
+		process die when
+			voluntary - normal exit, error exit
+			involuntary - fatal error, killed by another process
+		process hierarchies
+			- parent creates child process
+			forms a hierarchy
+				UNIX calls this "process group"
+				children of terminated process inherited by terminating
+				process's parent
+		process states: created, ready, running, blocked, exit
+		state transitions
+			process enters ready queue
+			scheduler picks process
+			scheduler picks another process
+			process waits for event
+			event occurs
+			process exits
+			process ended by another process
+
+1/15/16:
+	Scheduling - goals
+		all systems
+			fairness -share cpu fairly
+			enforcement - ensure policy is carried out
+			balance - balance keep all parts of system busy
+		batch systems
+			throughput - max jobs per unit time
+			turnaround time - min wait time for jobs
+			CPU utilization - keep CPU as busy as possible
+		interactive systems
+			response time - respond quickly to users' requests
+			proportionality - meet user's expectations
+		real-time systems
+			meet deadlines - missing deadlines bad
+			
+		Measuring scheduling performance
+			throughput
+			response time
+			turnaround time
+				- like response time for batch jobs
+		first come, first served (FCFS)
+			do jobs in order they arrive
+			simple
+			long jobs delay every job after them
+		shortest job first (SJF)
+			jobs sorted in increasing order of execution time
+			shortest remaining time first (SRTF): preemtive form of SFF
+				re-evaluate when a new job is submitted
+		three-level scheduling
+			jobs held in input queue until moved into memory
+			CPU scheduler picks next job to run
+			Memory scheduler picks some jobs from main memory and moves the to
+			disk if insufficient space
+		round robin (RR) scheduling
+			give each process a fixed time slot (quantum)
+			rotate through "ready" processes
+			each process makes some progress
+		what is a good quantum
+			too short: hurt efficiency
+			too long: poor response to interactive request
+			typical length 10-100ms
+		priority scheduling
+			assign priority to each process
+			priorities may be assigned dynamically
+				reduced when a process uses CPU time
+				increased when a process waits for I/O
+				often, process grouped into multiple queues based on priority
+				and run round-robin per queue
+		shortest process next
+			run process that will finish the soonest
+		lottery scheduling
+			give processes "tickets" for cpu time
+				more tickets -> higher share of CPU
+			each quantum, pick ticket at random
+			if n tickets, pick number from 1 to n
+			process holding  ticket gets to run for a quantum
+			can be implemented efficiently without "real" tickets
+				track range of tickets belonging to each process
+			over long run, each process gets the CPU m/n of the time
+			if the process has m of the n existing tickets
+			tickets can be transferred
+				cooperating process can exchange tickets
+				clients can transfer tickets to a server so it can have a higher
+				priority
+				parent (shell) can transfer tickets to a child process
+			scheduling in BSD4
+				longest quantum 100ms
+				scheduler is based on multi-level feedback queues
+					priority based on two things:
+					
+			FreeBSD ULE scheduler
+				divided into two parts
+					low level scheduler - runs on every context switch
+					high level schedulers - runs a few times per second
+				run queues only contain runnable threads
+					blocked threads placed on
+						turnstilem - blocked on short-term lock
+						sleepqueue - blocked on medium/long-term lock			
+			

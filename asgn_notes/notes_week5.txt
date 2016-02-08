@@ -1,0 +1,243 @@
+2/1/16:
+	Livelock
+		sometimes processes can run but not make progress
+		circular request and drop
+		example ethernet collisions
+	Synchronization problesms
+		bounded buffer
+			producers and consumers read/write from shared buffer
+		readers and writers
+			reading and writing processes
+	Dining philosophers
+		n philosophers
+		n chopsticks
+		2 chopsticks needed per philosopher
+		solution: use semaphore for each chopstick
+		and locks
+	Memory management
+		ideally memory big and fast
+		real world
+			either big or fast but not both
+	Memory hierarchy
+		multiple levels of memory
+		small and fast
+		big and slow
+		cache L1, L2, L3
+		main memory
+		disk
+		memory manager handles the memory hierarchy
+	Basic memory managers
+		components include
+			operating system
+			single process
+		no swapping or paging
+	Fixed partitions
+		divide memory into fixed spaces
+		assign process to space when it's free
+		separate input queue for each partition
+	How many processes
+		several memory partitions
+		more processes utilize CPU better
+		fewer processes use less memory
+	Modeling mutliprogramming
+		more I/O wait means less processor utilization
+		this means OS have more processes if they're I/O bound
+		more processes -> memory management and protection more
+		important
+	Memory and multiprograming
+		memory needs two things for mutliprogramming
+			relocation
+			protection
+		OS cannot be certain where a program will be loaded in memory
+			variables and procedures can't use absolute locations in memory
+		OS must keep processes' memory separate
+			protect processes from overwriting each others data
+			protect processes from modifying its own code in undesirable ways
+			e.g., writing to program code
+	Base and limit registers
+		access to registers limited to system mode
+		registers contain
+			base - start of the process's memory
+			limit - length of the process's memory partition
+		address generation
+			physical address - location in actual memory
+			logical address - location from the process's
+			point of view
+			physical address = base + logical address
+	Swapping
+		memory allocation changes as
+			processes come
+			processes leave
+	Swapping: leaving room to grow
+		need space for programs to grow
+		handled by allocating more space than is necessary at start
+	Tracking memory usage
+		track allocation of memory
+			regions that are available
+			regions that are in use
+	Tracking memory usage: bitmaps
+		keep track of free / allocated memory regions with bitmaps
+			one bit corresponds to a fixed-size region of memory
+			bitmap is constant size for a given memory size
+		chunk size determines efficiency
+			at 1 bit per 4KB chunk we need just 256 bits per MB of memory
+	
+2/3/16:
+	Tracking memory usage: linked lists
+		keep track of free / allocated memory regions with linked list
+			each entry corresponds to contiguous memory
+			entry can indicate either allocated or free
+			may have separate lists for free and allocated areas
+		efficient if chunks are large
+			fixed-size representations for each region
+			more regions -> more space needed fro free lists
+	Allocating memory
+		search through region list to find a large enough space
+		suppose there are several choices
+			first fit: the first suitable hole on the list
+			next fit: the first sutitable after the previously allocated hole
+			best fit: the smallest hole that is larger than the desired region
+			worst fit: the largest available hole
+		option: maintain separate queues for different-size holes
+	Freeing memory
+		allocation structures must be updates when memory is freed
+		easy with bitmaps: jsut set the appropriate bits in the bitmap
+		linked lists: modify adjacent elements as needed
+			merge adjacent free regions into single region
+			may merge two regions with just-freed area
+	Limitations of swapping
+		process must fit into physical memory
+		memory becomes fragmented
+		processes are either in memory or on disk
+		bring in pieces of process over time
+	Virtual memory
+		allow OS to hand out more memory than exists on the system
+		keep recently used stuff in physical memory
+		move less recently used stuff to disk
+		virtual memory allows CPU to schedule processes around
+		those waiting on I/O
+	Virtual and physical addresses
+		programs use virtual addresses
+			addresses local to process
+			hardware translates virtual address to physical address
+		Memory Management Unit (MMU)
+			usually on the same chip as CPU
+			only physical addresses leave the CPU/MMU
+		physical memory indexed by physical address
+	Page tables
+		virtual address mapped to physcial addresses
+			unit of mapping is called a page
+			all addresses in the same virtual page are in the same
+			physical page
+			page table entry (PTE) contains translation for single page
+		table translates virtual oage number to a physical page number
+			not all virtual memory has a physical page
+			not every physical page need be used
+	Page table entry
+		valid - set if logical page number contains a corresponding
+		phyisical frame
+		page frame number - page in physical memory
+		referenced bit - set if data on page has been accessed
+		dirty bit - set if data on page has been modified
+		protection information
+	Mapping logical address to physical address
+		split CPU addresses into two parts
+			page number
+			page offset
+		page number
+			index into page table
+			page table contains base address of page in physical memory
+		page offset
+			added to base address to get actual physical memory address
+		page size 2^(page offset) bytes
+	Two-level page tables
+		1st level page table has pointers to 2nd page table
+		2nd page table has actual physical page numbers
+		total number if bits indexing 1st and 2nd level page table is
+		constant for given page size and logical address length
+		more bits in 1st => fine granularity 2nd level
+		fewer bits => space saving (sometimes)
+		protection bits in 2nd table
+	
+2/5/16:
+	Page tables in hardware
+		page table resides in main physical memory
+		CPU uses special registers for paging
+			page table base register (PTBR) points to page table
+			page table length register (PTLR) contains length
+			of page table
+		translating an address requires two memory accesses
+			first access reads page table entry
+			second reads data / instruction from memory
+		reduce number of memory accesses
+			eliminate first access with hardware cache, translation
+			lookaside buffer (TLB), of recently used page table entries
+	Translation lookaside buffer (TLB)
+		search TLB for desired logical page number
+		if page found get frame number from TLB
+		if page not found
+			get frame number from page table
+			replace TLB entry with logical and physical numbers
+			for this reference
+	Handling TLB misses
+		if PTE not found in TLB OS needs to do lookup of page table
+		lookup can be hardware or software
+		hardware TLB replacement
+			CPU hardware does page table lookup
+			can be faster than software
+			less flexible than software and more complex hardware
+		software TLB replacement
+			OS gets TLB replacement
+			exception handler does page table lookup and places result in TLB
+			program continues after exception return
+			larger TLB (low miss rate) can make feasible
+	Memory access time
+		TLB lookup time = a
+		memory access = m
+		hit ration h is percentage of time logical page number is
+		found in TLB
+			larger TLB usually means higher h
+			TLB structure can affect h
+		effective access time (average)
+			EAT = (m + a)h + (m + m + a)(1-h)
+			EAT = a + (2-h)m
+	Inverted page table
+		reduce page table size - keep entry for each memory frame
+		PTE contains
+			virtual address pointing to frame
+			information about process that owns page
+		search page table
+			hashing the virtual page number and process ID
+			start at entry corresponding to the hash result
+			search until either the entry found or limit is reached
+		page frame number is index of PTE
+	Page replacement algorithms
+		page fault forces choice
+			no room for new page (steady state)
+			which page must be removed?
+		how page remved from physical memory
+			if page unmodified, simply overwrite
+			if page modified, must write back to disk
+		better not choose often used page
+	Not recently used (NRU) algorithm
+		each page has reference bit and dirty bit
+		pages classified as
+			0 - not referenced, not dirty
+			1 - not referenced, dirty
+			2 - referenced, not dirty
+			3 - referenced, dirty
+		clear reference bit for all page periodically
+		remove page from the lowest non-empty class
+			select random page from class
+		easy to understand, not optimal
+	First in, first out (FIFO) algorithm
+		maintain linked list of pages
+		page at front of list replaced
+		diadvantage: page in memory longest may be often used
+			algorithm disregards usage
+	Second chance replacement
+		modify FIFO to avoid throwing out heavily used pages
+		if reference bit 0, throw page out
+		if reference bit 1
+			reset reference bit to 0
+			move page to tail of list
