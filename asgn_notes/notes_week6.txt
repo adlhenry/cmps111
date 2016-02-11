@@ -1,0 +1,227 @@
+2/8/16:
+	Clock algorithm
+		same functionality as second chance
+		simpler implementation
+		clock hand point to next page to replace
+			if r=0, replace page
+			if r=1, set r=0 and advance the clock hand
+		continue until page with r=0 is found
+	Least Recently Used (LRU)
+		assumes pages used recently will be used again soon
+			throw out page unused for longest time
+		must keep a linked list of pages
+			most recently used at front, least at rear
+			update list every memory reference
+		alternatively, keep counter in each page table entry
+			global counter increments with each CPU cycle
+			copy global counter to PTE counter on a reference to page
+			for replacement, evict page with lowest counter value
+	Simulating LRU in software
+		few computers have the necessary hardware to implement full LRU
+			linked-list impractical or hardware
+			counter possible, but slow
+		approximate LRU with Not Frequently Used (NFU) algorithm
+			at each clock interrupt, scan through page table
+			if r=1 for a page, add one to its counter value
+			on replacement, pick the page with the lowest counter value
+		problem - no notion of age
+	Ageing replacement algorithm
+		reduce counter values over time
+			divide by two every clock cycle
+			more weight to recent references
+		select evicted page with lowest counter value
+	Working set
+		working set is the set of pages used by the k most recent memory
+		references
+		w(k,t) is the size of the working set at time t
+		working set may change over time
+	Modelling page replacement algorithms
+		provide quantitative analysis showing which algorithms do better
+		generate a list of references
+			artificial
+			trace a real workload
+		use an array to track pages in physical memory
+		run through references, applying replacement algorithm
+	Belady's anomaly
+		reduce the number of page faults by supplying more memory
+			use previous reference string and FIFO algorithm
+			add another page to physical memory
+		more page faults, not fewer
+			called Belady's anomaly
+	Stack algorithm
+		LRU is an example of a stack algorithm
+		stack algorithm do not suffer from Belday's algorithm
+	Predicting page fault rates using distance
+		distance can be used to predict page fault rates
+		make single pass over reference string to generate the
+		distance string on-the-fly
+		keep array of counts
+	Local vs.global allocation policies
+		local allocation - replace a page from process
+			may be more fair
+			can lead to poor performance - some
+			processes need more pages than others
+		global allocation - replace page from any process
+	Page fault rate vs. allocated frames
+		local allocation may be more fair
+		global allocation is better for system performance
+	Control overall page fault rate
+		despite good design, system may still thrash
+		most processes have high page fault rate
+		reduce number of processes competing for memory
+			swap one or more to disk, divy pages they held
+	Page size
+		smaller pages
+			less internal fragmentation
+			better fit for various data structures, code sections
+			less unused physical memory
+		larger pages
+			less overhead
+			smaller page tables
+			TLB can point to more memory
+			faster paging algorithms
+			more efficient to perform memory swap
+	Separate I & D address space
+		one user address space for both data and code
+			simple
+			more address space
+		one address space for data another for code
+			code and data separated
+			more complex hardware
+			less flexible
+			CPU handles instructions and data differently
+	Sharing pages
+		processes can share pages
+		virtual addresses in different processes
+			the same - easier to exchange pointers, keep data structures
+			consistent
+	Shared libraries
+		many libraries are used by multiple programs
+		only want to keep a single copy in memory
+		two possible approaches
+			fixed address in memory
+				no need for code to be relocated
+			per-process address in memory
+				more flexible
+				code has to be relocatable
+	Memory-mapped files
+		extension of shared libraries
+			file blocks mapped directly into a process's address space
+			process can access file data like memory
+		advantages
+			efficient - no read() or write() calls
+		disadvantages
+			added burden
+			difficult to specify order in which writes are flushed to disk
+			shared files might be mapped to different addresses in
+			different processes
+		
+2/10/16:
+	When are dirty pages written to disk
+		one demand
+			fewest writes to disk
+			slower - replacement takes twice as long (must wait for disk
+			write and read)
+		periodically
+			background process scans page tables and writes out old dirty pages
+		background process keeps a list of pages ready for replacement
+			page faults handled faster (eliminate finding space on demand)
+	Four times OS involved with paging
+		process creation
+			determine program size
+			create page table
+		process execution
+			reset the MMU for new process
+			flush the TLB
+		page fault
+			determine virtual address causing fault
+			swap target page out, needed page in
+		process termination
+			release page table
+			return pages to free pool
+	Page fault handling
+		hardware causes a page fault
+		general registers saved
+		OS determines which virtual page needed
+			fault address in special register
+			address of faulting instruction in register
+				either instruction or data fault
+				OS figures out which
+		OS checks validity of address
+		process killed if address illegal
+		OS finds a place to put a new page frame
+		if frame selected for replacement is dirty,
+		write out to disk
+		OS requests the new page from disk
+		page tables updated
+		faulting instruction backed up so it
+		can be restarted
+		faulting process scheduled
+		registers restored
+		program continues
+	Backing up an instruction
+		page fault happens during instruction execution
+		undo all changes made by instruction
+	Locking pages in memory
+		virtual memory and I/O occasionally interact
+		P1 issues call to read device into buffer
+			page fault may lead to buffer being replaced
+		allow some pages to be locked into memory
+			locked pages immune from replacement
+			pages only locked for short periods
+	Storing pages on disk
+		pages removed from memory stored on disk
+		where placed?
+			static swap area - simple
+			dynamically allocated space - flexible, hard to locate a page
+	Separating policy and mechanism
+		mechanism for page replacement has to be in kernel
+			modifying page tables
+			reading and writing page table entries
+		page replacement policy could be in user space
+	Segmentation
+		different units in single virtual address space
+			each unit can grow
+			each unit has its own address space
+	Using segments
+		each region of the process has its own segment
+		each segment can start at 0
+		virtual addresses are <segment #, offset within segment>
+	Paging vs. segmentation							Paging	Segmentation
+		need programmer know about it?					No		Yes
+		how many linear address spaces?					1		Many
+		more addresses than physical memory?			Yes		Yes
+		separate protection for different objects?		No		Yes
+		variable-sized objects handled with ease?		No		Yes
+		is sharing easy?								No		Yes
+		paging
+			more address space without more memory
+		segmentation
+			break programs into logical pieces
+			handled separately
+	Memory management in x86-32
+		memory composed of segments
+			segment pointed to by segment descriptor
+			segment selector used to identify descriptor
+		segment descriptor describes segment
+			base virtual address
+			size
+			protection
+			code/data
+	Converting segment to linear address
+		selector identifies segment descriptor
+		offset added to segment's base address
+		result is virtual address to be translated by paging
+	Translating virtual to physical addresses
+		x86-32 uses two level page tables
+			top level called page directory (1024 entries)
+			second level called page table (1024 entries each)
+			4KB pages
+	Paging in x86-64
+		x86-64 uses paging
+		initially only 48-bits valid
+		page table has four levels
+			translates 64-bit virtual addresses
+			into 52-bit physical addresses
+		page sizes fixed to either 4KB or 2MB
+			fixed across entire page table
