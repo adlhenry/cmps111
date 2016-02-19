@@ -1,5 +1,215 @@
-2/17/16:
-	
+2/17/16:	
+	Device controllers
+		I/O device have mechanical and eletronic components
+		electronic component controls the device
+			may handle multiple device
+			may be more than one controller per mechanical
+			component (e.g., HDD)
+		controller taks
+			convert serial bit stream to block of bytes
+			perform error correction
+			make available to main memory
+	Memory mapped I/O
+		single-bus
+			all memory accesses go over a shared bus
+			I/O and RAM accesses compete for bandwith
+		dual-bus
+			ram access over high speed bus
+			I/O access over lower speed bus
+	Direct Memory Access (DMA)
+		CPU programs DMA controller
+		DMA controller requests transfer to memory
+		data is transfered from disk to main memory
+		disk controller ACKs DMA
+		DMA sends interrupt to CPU
+	Hardware view of interrupt
+		device signals interrupt controller
+		controller issues interrupt
+		CPU ACKs interrupt to controller
+	I/O software goals
+		device independent
+		uniform naming
+		error handling
+		synchronous vs. asynchronous transfers
+		buffering
+		sharable vs. dedicated devices
+	Programmed I/O
+		copy user data to buffer
+		wait for printer ready
+		print char
+		repeat for all chars
+		return to user
+	Interrupt-driven I/O
+		system call
+			copy user data to buffer
+			enable interrupts
+			wait for printer ready
+			print char
+			block user
+		interrupt code
+			if count == 0
+			otherwise
+				print char and decrease count
+			ack interrupt
+			return from interrupt
+	DMA I/O
+		system call
+			copy user data to buffer
+			setup controller
+			block user
+		interrupt code
+			ack interrupt
+			unblock user
+			return from interrupt
+	Layers of I/O software
+		user software and libraries
+		device-independent OS code
+		device drivers
+		interrupt handlers
+		hardware
+	Interrupt handlers
+		interrupt handlers hidden
+			driver starts I/O operation and blocks
+			interrupt notifies of completion
+		interrupt procedure does its task
+			then unblocks driver that started its
+			performs minimal actions at interrupt time
+		interrupt handler must
+			 save registers not already saved by interrupt hardware
+			 set up context for interrupt service procedure
+	What happens on an interrupt
+		set up stack for interrupt service procedure
+		ACK interrupt controller, reenable interrupts
+		copy registers from where saved
+		run service procedures
+		pick new process to run next (optional)
+		set up MMU context for process to run next
+		load new process' registers
+		start running new process
+	Device drivers
+		device drivers go between device controllers and rest of OS
+		device drivers communicate with controllers over bus
+	Device-independent I/O software
+		device-independent I/O software provides common routines for I/O software
+		helps drivers maintain a standard appearance to rest of OS
+		uniform interface for many device drivers for
+			buffering
+			error reporting
+			allocating and releasing dedicated devices
+			suspending and resuming processes
+		common resource pool
+			device-independent block size (track blocks)
+			other device driver resources
 	
 2/19/16:
-	
+	Why a standard driver interface?
+		non-standard device driver interface
+			different interface for each driver
+			high OS complexity
+			less reusable code
+		standard device driver interface
+			less OS/driver interface code
+			lower OS complexity
+	Buffering device input
+		unbuffered input
+		buffering in user space
+		buffer in kernel copy to user
+		double buffer in kernel
+	What happens where on I/O requests
+		user processes
+			make I/O call, format I/O, spooling
+		device-independent code
+			naming, protection blocking/buffering/allocation
+		device drivers
+			manage device registers and status
+		interrupt handlers
+			signal device driver on completed I/O
+		hardware
+			do actual I/O
+	Disk drive structure
+		data stored on sufaces
+			up to two surfaces per platter
+			one or more platters per disk
+		data in concentric tracks
+			tracks broken into sectors
+			cylinder - corresponding tracks on all surfaces
+		data read and written by heads
+	Disk zones
+		outside tracks are longer than inside tracks
+		two options for longer tracks
+			bits are "bigger"
+			more bits (transfer time)
+		modern drives use second option
+			more data on outer tracks
+		disk divided into zones
+			constant sectors per track in each zone
+			8-30 zones on a disk
+	Disk addressing
+		millions of sectors on disk must be labeled
+		two possiblities
+			cylinder/track/sector
+			sequential numbering
+		modern drives use sequential numbers
+			disks map sequential numbers into specific location
+			mapping may be modified by disk
+				remap bad sectors
+				optimize performance
+			hide exact geometry
+	Build better "disk"
+		CPU performance increasing exponentially,
+		but disk performance hasn't
+		disks aren't reliable
+		solution - distribute data across disks and use
+		some space to improve reliablity
+			data transferred in parallel
+			data stored across drives (striping)
+			parity on "extra" drive for reliability
+	Redundant Array of Inexpensive Disks (RAID)
+		RAID 0 - striped
+		RAID 1 - mirrored copies
+		RAID 4 - striped with parity
+		RAID 5 - parity rotates through disks
+	CD-ROM recording
+		CD-ROM has data in spiral
+		one continuous track
+		pits and lands "simulated" with heat-sensitive material
+	Structure of a disk sector
+		preamble | data | ECC
+		preamble contains information about sector
+			sector number and location information
+		data usually 256, 512, or 1024 bytes
+		ECC (Error Correcting Code) used to detect
+		and correct minor errors in the data
+	Sector layout on disk
+		sectors numbered sequentially on each track
+		numbering starts in different place on each track
+			sector skew
+			allows time for switching head from track to track
+	Sector interleaving
+		on older systems CPU slow => time elapsed between reading
+		consecutive sectors
+		solution - leave space between consecutively numbered sectors
+		not done much any more
+	What's in a disk request?
+		time required to read or write a disk block
+		determined by 3 factors
+			seek time
+			rotational delay
+				average delay = 1/2 rotation time
+			actual transfer time
+				time to rotate over a sector
+		seek time dominates, with rotation time close
+		error checking done by controllers
+	Disk request scheduling
+		use hardware efficiently
+			bandwidth as high as possible
+			disk transfering as often as possible (not seeking)
+		minimize disk seek time - moving from track to track
+		minimze rotational latency - waiting for disk to
+			rotate desired sector under read/write head
+		calculate disk bandwidth by
+			total bytes transferred / time to service request
+			seek time and rotational latency are overhead
+		minimize seek time and rotational latency by
+			using algorithms to find a good sequence for servicing requests
+			placing blocks of a file "near" each other
