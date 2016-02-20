@@ -1,25 +1,25 @@
 2/17/16:	
 	Device controllers
-		I/O device have mechanical and eletronic components
+		I/O device have mechanical and electronic components
 		electronic component controls the device
 			may handle multiple device
 			may be more than one controller per mechanical
 			component (e.g., HDD)
-		controller taks
+		controller tasks
 			convert serial bit stream to block of bytes
 			perform error correction
 			make available to main memory
 	Memory mapped I/O
 		single-bus
 			all memory accesses go over a shared bus
-			I/O and RAM accesses compete for bandwith
+			I/O and RAM accesses compete for bandwidth
 		dual-bus
 			ram access over high speed bus
 			I/O access over lower speed bus
 	Direct Memory Access (DMA)
 		CPU programs DMA controller
 		DMA controller requests transfer to memory
-		data is transfered from disk to main memory
+		data is transferred from disk to main memory
 		disk controller ACKs DMA
 		DMA sends interrupt to CPU
 	Hardware view of interrupt
@@ -32,7 +32,7 @@
 		error handling
 		synchronous vs. asynchronous transfers
 		buffering
-		sharable vs. dedicated devices
+		shareable vs. dedicated devices
 	Programmed I/O
 		copy user data to buffer
 		wait for printer ready
@@ -127,7 +127,7 @@
 		hardware
 			do actual I/O
 	Disk drive structure
-		data stored on sufaces
+		data stored on surfaces
 			up to two surfaces per platter
 			one or more platters per disk
 		data in concentric tracks
@@ -146,7 +146,7 @@
 			8-30 zones on a disk
 	Disk addressing
 		millions of sectors on disk must be labeled
-		two possiblities
+		two possibilities
 			cylinder/track/sector
 			sequential numbering
 		modern drives use sequential numbers
@@ -160,7 +160,7 @@
 		but disk performance hasn't
 		disks aren't reliable
 		solution - distribute data across disks and use
-		some space to improve reliablity
+		some space to improve reliability
 			data transferred in parallel
 			data stored across drives (striping)
 			parity on "extra" drive for reliability
@@ -203,9 +203,9 @@
 	Disk request scheduling
 		use hardware efficiently
 			bandwidth as high as possible
-			disk transfering as often as possible (not seeking)
+			disk transferring as often as possible (not seeking)
 		minimize disk seek time - moving from track to track
-		minimze rotational latency - waiting for disk to
+		minimize rotational latency - waiting for disk to
 			rotate desired sector under read/write head
 		calculate disk bandwidth by
 			total bytes transferred / time to service request
