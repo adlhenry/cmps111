@@ -1,4 +1,121 @@
 2/22/16:
+	Cryptography basics
+		algorithms are widely known
+		keys should be less widely distributed
+		for this to be effective, the ciphertext should be
+		the only information that's available to the world
+		plaintext is only known to the people with keys (ideal world)
+	Secret key encryption
+		also called symmetric-key encryption
+		monoalphabetic substitution
+			each letter replaced by different letter
+		vignere cipher
+			use a multi-character key
+		easy to break
+		given encryption key easy to generate decryption key
+	Modern encryption algorithms
+		Data Encryption Standard (DES)
+			uses 56-bit keys
+			same key used to encrypt and decrypt
+			need 2^55 different keys to guess on average
+			for $250K EFF built machine that broke DES quickly
+		current algorithms (AES, Blowfish) use at least 128 bit keys
+	Unbreakable codes
+		one time pad
+			uses truly random key as long as message to be encoded
+			XOR the message with the key a bit at a time
+		code unbreakable because
+			key code be anything
+			without key, message could be anything with correct number of bits
+		distributing key is as hard as distributing message
+		difficult to generate truly random bits
+	Truly random bits
+		typical random number generators aren't really random
+		get randomness from outside world
+			timing intervals, key presses, network packets, etc.
+			use a few (low-order) bits from each sample
+		may use physical processes
+			radioactive decay
+			lava lamps
+			webcams (with lens cap on)
+		current approach: leaky diodes
+			built into newer Intel x86 CPUs
+	Public-key cryptography
+		instead of single shared secret, keys come in pairs
+			one key for each pair distributed widely
+			one key of each pair kept secret
+			keys are inverses of each other, but not identical
+	RSA algortihm for public key encryption
+		private, public key pair consists of KR = (d,n), KU = (e,n)
+			n = pxq (p and q are large prime numbers)
+			e is a randomly chosen integer with GCD
+			d is an integer 
+		
+	One-way functions
+		functions such that
+			given formula for f(fx), easy to evaluate y = h(x)
+			difficult to find collisions: two values with the same hash function
+				weak collision resistance: given y, hard to find x such that f(x) = y
+				strong collisions resistance: hard to find x and x' =/= x
+				such that f(x) = f(x')
+		often operate similar to encryption algorithms
+		common algorithms
+			MD5 - 128bit results
+			SHA-1 - 160bit result
+			SHA-256 - 256bit result
+	Digital signatures
+		digital signature computed by
+			applying one-way hash function to original document
+			encryption result with sender's private key
+		receiver can verify by
+			applying one-way hash function to received document
+			decrypting signature using sender's public key
+			comparing the two results
+	Pretty Good Privacy (PGP)
+		uses public encryption
+		public key encryption is very slow
+		use public key encryption to exchange a shared key
+			shared key is relatively short (~128 bits)
+			message encrypted using symmetric key encryption
+		PGP can also be used to authenticate sender
+	Diffie-Helman Algorithm
+		
+	User authentication
+		use authentication to identify
+			something the user knows
+			something the user has
+			something the user is
+	Authentication using passwords
+		
+	Dealing with passwords
+		passwords should be memorable
+		passwords shouldn't be stored "in the clear"
+		use hashing to hide "real" password
+			- one-way function converting password to meaningless
+			string of digits (UNIX password hash, MD5, SHA-1)
+			- difficult to find another password that hashes
+			to the same random-looking string
+			- knowing the hashed value and hash function gives
+			no clue to the original password
+	Salting the passwords
+		
+	One-time passwords
+		often implemented using one-way hash chain
+		server is initialized with the list of passwords (or just n)
+		on each login, server passes n to the client, which hashes
+		the password n times and returns the answer
+	Authentication using physical object
+		magnetic card
+			stores a password encoded in the magnetic strip
+			allows for longer, harder to memorize passwords
+		smart card
+			card has secret encoded
+	Two-factor authentication: OAuth
+		additional "password" using a hardware token
+		server and token share a (long) secret
+		token computes
+	Authentication using biometrics
+				
 	
 2/24/16:
 	
