@@ -908,6 +908,37 @@ vm_pageout_map_deactivate_pages(map, desired)
 }
 #endif		/* !defined(NO_SWAPPING) */
 
+// Pageout statistics global counters
+u_int vm_pageout_scanned = 0;
+u_int vm_pageout_deactivated = 0;
+u_int vm_pageout_cached = 0;
+u_int vm_pageout_flushed = 0;
+
+static void vm_pageout_resetstats(void);
+static void vm_pageout_log(void);
+
+/*
+* Reset pageout statistics global counters
+*/
+static void
+vm_pageout_resetstats(void)
+{
+	vm_pageout_scanned = 0;
+	vm_pageout_deactivated = 0;
+	vm_pageout_cached = 0;
+	vm_pageout_flushed = 0;
+}
+
+/*
+* Log pageout statistics for a single run.
+*/
+static void
+vm_pageout_log(void)
+{
+	syslog(LOG_INFO, "%5u %5u %5u %5u", vm_pageout_scanned, vm_pageout_deactivated,
+	vm_pageout_cached, vm_pageout_flushed);
+}
+
 /*
  *	vm_pageout_scan does the dirty work for the pageout daemon.
  *
