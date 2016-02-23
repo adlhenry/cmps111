@@ -98,6 +98,7 @@ __FBSDID("$FreeBSD: releng/10.2/sys/vm/vm_pageout.c 284665 2015-06-21 06:28:26Z 
 #include <sys/rwlock.h>
 #include <sys/sx.h>
 #include <sys/sysctl.h>
+#include <sys/syslog.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -918,7 +919,7 @@ static void vm_pageout_resetstats(void);
 static void vm_pageout_log(void);
 
 /*
-* Reset pageout statistics global counters
+* Reset pageout statistics global counters.
 */
 static void
 vm_pageout_resetstats(void)
