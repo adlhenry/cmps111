@@ -909,35 +909,29 @@ vm_pageout_map_deactivate_pages(map, desired)
 }
 #endif		/* !defined(NO_SWAPPING) */
 
-// Pageout statistics global counters
-u_int vm_pageout_scanned = 0;
-u_int vm_pageout_deactivated = 0;
-u_int vm_pageout_cached = 0;
-u_int vm_pageout_flushed = 0;
-
-static void vm_pageout_resetstats(void);
-static void vm_pageout_log(void);
+static void vm_pageout_resetstats(struct vm_domain *vmd);
+static void vm_pageout_log(struct vm_domain *vmd);
 
 /*
-* Reset pageout statistics global counters.
+* Reset pageout statistics.
 */
 static void
-vm_pageout_resetstats(void)
+vm_pageout_resetstats(struct vm_domain *vmd)
 {
-	vm_pageout_scanned = 0;
-	vm_pageout_deactivated = 0;
-	vm_pageout_cached = 0;
-	vm_pageout_flushed = 0;
+	vmd->vmd_scanned = 0;
+	vmd->vmd_deactivated = 0;
+	vmd->vmd_cached = 0;
+	vmd->vmd_flushed = 0;
 }
 
 /*
 * Log pageout statistics for a single run.
 */
 static void
-vm_pageout_log(void)
+vm_pageout_log(struct vm_domain *vmd)
 {
-	syslog(LOG_INFO, "%5u %5u %5u %5u", vm_pageout_scanned, vm_pageout_deactivated,
-	vm_pageout_cached, vm_pageout_flushed);
+	syslog(LOG_INFO, "%5u %5u %5u %5u", vmd->vmd_scanned, vmd->vmd_deactivated,
+	vmd->vmd_cached, vmd->vmd_flushed);
 }
 
 /*
@@ -1031,6 +1025,7 @@ vm_pageout_scan(struct vm_domain *vmd, int pass)
 
 		PCPU_INC(cnt.v_pdpages);
 		next = TAILQ_NEXT(m, plinks.q);
+		vmd->vmd_scanned++;
 
 		/*
 		 * skip marker pages
@@ -1157,6 +1152,7 @@ vm_pageout_scan(struct vm_domain *vmd, int pass)
 			vm_page_free(m);
 			PCPU_INC(cnt.v_dfree);
 			--page_shortage;
+			vmd->vmd_cached++;
 		} else if (m->dirty == 0) {
 			/*
 			 * Clean pages can be placed onto the cache queue.
@@ -1164,6 +1160,7 @@ vm_pageout_scan(struct vm_domain *vmd, int pass)
 			 */
 			vm_page_cache(m);
 			--page_shortage;
+			vmd->vmd_cached++;
 		} else if ((m->flags & PG_WINATCFLS) == 0 && pass < 2) {
 			/*
 			 * Dirty pages need to be paged out, but flushing
@@ -1323,6 +1320,7 @@ vm_pageout_scan(struct vm_domain *vmd, int pass)
 			if (vm_pageout_clean(m) != 0) {
 				--page_shortage;
 				--maxlaunder;
+				vmd->vmd_flushed++;
 			}
 unlock_and_continue:
 			vm_page_lock_assert(m, MA_NOTOWNED);
@@ -1420,6 +1418,7 @@ relock_queues:
 		 * page for eligibility...
 		 */
 		PCPU_INC(cnt.v_pdpages);
+		vmd->vmd_scanned++;
 
 		/*
 		 * Check to see "how much" the page has been used.
@@ -1461,6 +1460,7 @@ relock_queues:
 			vm_page_dequeue_locked(m);
 			vm_page_deactivate(m);
 			page_shortage--;
+			vmd->vmd_deactivated++;
 		} else
 			vm_page_requeue_locked(m);
 		vm_page_unlock(m);
@@ -1685,6 +1685,10 @@ vm_pageout_worker(void *arg)
 			 * Good enough, sleep until required to refresh
 			 * stats.
 			 */
+			if (domain->vmd_pass) {
+				vm_pageout_log(domain);
+				vm_pageout_resetstats(domain);
+			}
 			domain->vmd_pass = 0;
 			msleep(&vm_pages_needed, &vm_page_queue_free_mtx,
 			    PVM, "psleep", hz);
@@ -1745,7 +1749,7 @@ vm_pageout_init(void)
 	 * case paging behaviors with stale active LRU.
 	 */
 	if (vm_pageout_update_period == 0)
-		vm_pageout_update_period = 600;
+		vm_pageout_update_period = 10;
 
 	/* XXX does not really belong here */
 	if (vm_page_max_wired == 0)

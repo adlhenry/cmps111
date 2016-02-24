@@ -224,6 +224,10 @@ struct vm_domain {
 	struct vm_pagequeue vmd_pagequeues[PQ_COUNT];
 	u_int vmd_page_count;
 	u_int vmd_free_count;
+	u_int vmd_scanned;
+	u_int vmd_deactivated;
+	u_int vmd_cached;
+	u_int vmd_flushed;
 	long vmd_segs;	/* bitmask of the segments */
 	boolean_t vmd_oom;
 	int vmd_pass;	/* local pagedaemon pass */
