@@ -930,7 +930,7 @@ vm_pageout_resetstats(struct vm_domain *vmd)
 static void
 vm_pageout_log(struct vm_domain *vmd)
 {
-	syslog(LOG_INFO, "%5u %5u %5u %5u", vmd->vmd_scanned, vmd->vmd_deactivated,
+	log(LOG_INFO, "%5u %5u %5u %5u", vmd->vmd_scanned, vmd->vmd_deactivated,
 	vmd->vmd_cached, vmd->vmd_flushed);
 }
 
