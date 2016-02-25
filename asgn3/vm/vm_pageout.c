@@ -918,6 +918,7 @@ static inline void
 vm_pageout_resetstats(struct vm_domain *vmd)
 {
 	vmd->vmd_scanned = 0;
+	vmd->vmd_reactivated = 0;
 	vmd->vmd_deactivated = 0;
 	vmd->vmd_cached = 0;
 	vmd->vmd_flushed = 0;
@@ -931,15 +932,19 @@ vm_pageout_log(struct vm_domain *vmd)
 {
 	/*
 	log(LOG_INFO, "%7u %7u %7u %7u %7u",
-	cnt.v_wire_count,
-	cnt.v_active_count,
-	cnt.v_inactive_count,
-	cnt.v_cache_count,
-	cnt.v_free_count);
+		cnt.v_wire_count,
+		cnt.v_active_count,
+		cnt.v_inactive_count,
+		cnt.v_cache_count,
+		cnt.v_free_count);
 	*/
 	
-	log(LOG_INFO, "%5u %5u %5u %5u", vmd->vmd_scanned, vmd->vmd_deactivated,
-	vmd->vmd_cached, vmd->vmd_flushed);
+	log(LOG_INFO, "%7u %7u %7u %7u %7u",
+		vmd->vmd_scanned,
+		vmd->vmd_reactivated,
+		vmd->vmd_deactivated,
+		vmd->vmd_cached,
+		vmd->vmd_flushed);
 }
 
 /*
@@ -1117,6 +1122,7 @@ vm_pageout_scan_old(struct vm_domain *vmd, int pass)
 			if (object->ref_count) {
 				vm_page_activate(m);
 				m->act_count += act_delta + ACT_ADVANCE;
+				vmd->vmd_reactivated++;
 			} else {
 				vm_pagequeue_lock(pq);
 				queues_locked = TRUE;

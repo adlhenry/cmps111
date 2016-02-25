@@ -225,6 +225,7 @@ struct vm_domain {
 	u_int vmd_page_count;
 	u_int vmd_free_count;
 	u_int vmd_scanned;
+	u_int vmd_reactivated;
 	u_int vmd_deactivated;
 	u_int vmd_cached;
 	u_int vmd_flushed;
