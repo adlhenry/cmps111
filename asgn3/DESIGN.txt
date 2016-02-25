@@ -1,0 +1,27 @@
+// Author: Adam Henry, adlhenry@ucsc.edu
+
+SYNOPSIS
+	Slim Chance Paging - A simple paging daemon for freeBSD.
+	
+	Slim Chance Algorithm
+		
+	
+DATA
+vm_page.h
+	vmd_scanned - count of pages scanned
+	vmd_deactivated - count of pages moved from the active queue to
+					  the inactive queue
+	vmd_reactivated - count of pages moved from the inactive queue to 
+					  the active queue
+	vmd_cached - count of pages moved from the inactive queue to
+				 the cache queue
+	vmd_flushed - count of pages moved from the inactive queue to
+				  the free queue
+	
+FUNCTIONS
+vm_pageout.c
+	function_name()
+		purpose - 
+		inputs - 
+		outputs - 
+		assumptions - 

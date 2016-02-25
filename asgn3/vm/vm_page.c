@@ -262,8 +262,8 @@ vm_page_domain_init(struct vm_domain *vmd)
 	vmd->vmd_page_count = 0;
 	vmd->vmd_free_count = 0;
 	vmd->vmd_scanned = 0;
-	vmd->vmd_reactivated = 0;
 	vmd->vmd_deactivated = 0;
+	vmd->vmd_reactivated = 0;
 	vmd->vmd_cached = 0;
 	vmd->vmd_flushed = 0;
 	vmd->vmd_segs = 0;

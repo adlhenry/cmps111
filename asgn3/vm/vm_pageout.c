@@ -918,8 +918,8 @@ static inline void
 vm_pageout_resetstats(struct vm_domain *vmd)
 {
 	vmd->vmd_scanned = 0;
-	vmd->vmd_reactivated = 0;
 	vmd->vmd_deactivated = 0;
+	vmd->vmd_reactivated = 0;
 	vmd->vmd_cached = 0;
 	vmd->vmd_flushed = 0;
 }
@@ -941,8 +941,8 @@ vm_pageout_log(struct vm_domain *vmd)
 	
 	log(LOG_INFO, "%7u %7u %7u %7u %7u",
 		vmd->vmd_scanned,
-		vmd->vmd_reactivated,
 		vmd->vmd_deactivated,
+		vmd->vmd_reactivated,
 		vmd->vmd_cached,
 		vmd->vmd_flushed);
 }
