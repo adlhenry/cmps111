@@ -4,7 +4,15 @@ SYNOPSIS
 	Slim Chance Paging - A simple paging daemon for freeBSD.
 	
 	Slim Chance Algorithm
-		
+		The slim chance algorithm works almost the same as the
+		default second chance clock algorithm used by freeBSD.
+		Except for the following differences: inactive and invalid
+		pages are moved to the rear of the free queue instead of the
+		front, the activity count for a page gets decayed to half its
+		original value and placed at the front of the active queue
+		instead of being linearly decayed and being placed at the 
+		rear of the active queue, and pages moved to the inactive
+		queue get placed at the front instead of the rear.
 	
 DATA
 vm_page.h
@@ -20,8 +28,40 @@ vm_page.h
 	
 FUNCTIONS
 vm_pageout.c
-	function_name()
+	vm_pageout_resetstats()
+		purpose - reset the statistic variables for a single run
+				  of the page daemon
+		inputs - pointer to a struct vm_domain
+		outputs - none
+		assumptions - the pointer to the struct vm_domain is non-null
+		
+	vm_pageout_log()
+		purpose - print page daemon statistics to the system log
+		inputs - pointer to a struct vm_domain
+		outputs - text to the file /var/log/messages
+		assumptions - the pointer to the struct vm_domain is non-null
+		
+	vm_pageout_scan()
 		purpose - 
 		inputs - 
 		outputs - 
 		assumptions - 
+	
+vm_page.c
+	vm_page_free2()
+		purpose - move a page to the rear of the free queue
+		inputs - a vm_page_t
+		outputs - none
+		assumptions - the page is nonbusy and eligible to be freed
+		
+	vm_page_deactivate2()
+		purpose - move a page to the front of the inactive queue
+		inputs - a vm_page_t
+		outputs - none
+		assumptions - the vm_page_t object is locked
+		
+	vm_page_requeue_locked2()
+		purpose - move a page to the front of its current page queue
+		inputs - a vm_page_t
+		outputs - none
+		assumptions - the page's queue is locked

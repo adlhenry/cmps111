@@ -13,6 +13,7 @@ INSTALL
 TEST
 	pkg install stress
 	stress -m 20 --vm-bytes 288M -t 20s
+	cat /var/log/messages
 
 CONTRIBUTION
 	
