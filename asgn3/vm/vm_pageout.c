@@ -911,6 +911,7 @@ vm_pageout_map_deactivate_pages(map, desired)
 
 static void vm_pageout_resetstats(struct vm_domain *vmd);
 static void vm_pageout_log(struct vm_domain *vmd);
+static void vm_pageout_scan_old(struct vm_domain *vmd, int pass)
 
 /*
 * Reset pageout statistics.
@@ -943,6 +944,562 @@ vm_pageout_log(struct vm_domain *vmd)
  */
 static void
 vm_pageout_scan(struct vm_domain *vmd, int pass)
+{
+	vm_page_t m, next;
+	struct vm_pagequeue *pq;
+	vm_object_t object;
+	int act_delta, addl_page_shortage, deficit, maxscan, page_shortage;
+	int vnodes_skipped = 0;
+	int maxlaunder;
+	int lockmode;
+	boolean_t queues_locked;
+
+	/*
+	 * If we need to reclaim memory ask kernel caches to return
+	 * some.  We rate limit to avoid thrashing.
+	 */
+	if (vmd == &vm_dom[0] && pass > 0 &&
+	    (ticks - lowmem_ticks) / hz >= lowmem_period) {
+		/*
+		 * Decrease registered cache sizes.
+		 */
+		SDT_PROBE0(vm, , , vm__lowmem_scan);
+		EVENTHANDLER_INVOKE(vm_lowmem, 0);
+		/*
+		 * We do this explicitly after the caches have been
+		 * drained above.
+		 */
+		uma_reclaim();
+		lowmem_ticks = ticks;
+	}
+
+	/*
+	 * The addl_page_shortage is the number of temporarily
+	 * stuck pages in the inactive queue.  In other words, the
+	 * number of pages from the inactive count that should be
+	 * discounted in setting the target for the active queue scan.
+	 */
+	addl_page_shortage = 0;
+
+	/*
+	 * Calculate the number of pages we want to either free or move
+	 * to the cache.
+	 */
+	if (pass > 0) {
+		deficit = atomic_readandclear_int(&vm_pageout_deficit);
+		page_shortage = vm_paging_target() + deficit;
+	} else
+		page_shortage = deficit = 0;
+
+	/*
+	 * maxlaunder limits the number of dirty pages we flush per scan.
+	 * For most systems a smaller value (16 or 32) is more robust under
+	 * extreme memory and disk pressure because any unnecessary writes
+	 * to disk can result in extreme performance degredation.  However,
+	 * systems with excessive dirty pages (especially when MAP_NOSYNC is
+	 * used) will die horribly with limited laundering.  If the pageout
+	 * daemon cannot clean enough pages in the first pass, we let it go
+	 * all out in succeeding passes.
+	 */
+	if ((maxlaunder = vm_max_launder) <= 1)
+		maxlaunder = 1;
+	if (pass > 1)
+		maxlaunder = 10000;
+
+	/*
+	 * Start scanning the inactive queue for pages we can move to the
+	 * cache or free.  The scan will stop when the target is reached or
+	 * we have scanned the entire inactive queue.  Note that m->act_count
+	 * is not used to form decisions for the inactive queue, only for the
+	 * active queue.
+	 */
+	pq = &vmd->vmd_pagequeues[PQ_INACTIVE];
+	maxscan = pq->pq_cnt;
+	vm_pagequeue_lock(pq);
+	queues_locked = TRUE;
+	for (m = TAILQ_FIRST(&pq->pq_pl);
+	     m != NULL && maxscan-- > 0 && page_shortage > 0;
+	     m = next) {
+		vm_pagequeue_assert_locked(pq);
+		KASSERT(queues_locked, ("unlocked queues"));
+		KASSERT(m->queue == PQ_INACTIVE, ("Inactive queue %p", m));
+
+		PCPU_INC(cnt.v_pdpages);
+		next = TAILQ_NEXT(m, plinks.q);
+		vmd->vmd_scanned++;
+
+		/*
+		 * skip marker pages
+		 */
+		if (m->flags & PG_MARKER)
+			continue;
+
+		KASSERT((m->flags & PG_FICTITIOUS) == 0,
+		    ("Fictitious page %p cannot be in inactive queue", m));
+		KASSERT((m->oflags & VPO_UNMANAGED) == 0,
+		    ("Unmanaged page %p cannot be in inactive queue", m));
+
+		/*
+		 * The page or object lock acquisitions fail if the
+		 * page was removed from the queue or moved to a
+		 * different position within the queue.  In either
+		 * case, addl_page_shortage should not be incremented.
+		 */
+		if (!vm_pageout_page_lock(m, &next)) {
+			vm_page_unlock(m);
+			continue;
+		}
+		object = m->object;
+		if (!VM_OBJECT_TRYWLOCK(object) &&
+		    !vm_pageout_fallback_object_lock(m, &next)) {
+			vm_page_unlock(m);
+			VM_OBJECT_WUNLOCK(object);
+			continue;
+		}
+
+		/*
+		 * Don't mess with busy pages, keep them at at the
+		 * front of the queue, most likely they are being
+		 * paged out.  Increment addl_page_shortage for busy
+		 * pages, because they may leave the inactive queue
+		 * shortly after page scan is finished.
+		 */
+		if (vm_page_busied(m)) {
+			vm_page_unlock(m);
+			VM_OBJECT_WUNLOCK(object);
+			addl_page_shortage++;
+			continue;
+		}
+
+		/*
+		 * We unlock the inactive page queue, invalidating the
+		 * 'next' pointer.  Use our marker to remember our
+		 * place.
+		 */
+		TAILQ_INSERT_AFTER(&pq->pq_pl, m, &vmd->vmd_marker, plinks.q);
+		vm_pagequeue_unlock(pq);
+		queues_locked = FALSE;
+
+		/*
+		 * We bump the activation count if the page has been
+		 * referenced while in the inactive queue.  This makes
+		 * it less likely that the page will be added back to the
+		 * inactive queue prematurely again.  Here we check the 
+		 * page tables (or emulated bits, if any), given the upper 
+		 * level VM system not knowing anything about existing 
+		 * references.
+		 */
+		act_delta = 0;
+		if ((m->aflags & PGA_REFERENCED) != 0) {
+			vm_page_aflag_clear(m, PGA_REFERENCED);
+			act_delta = 1;
+		}
+		if (object->ref_count != 0) {
+			act_delta += pmap_ts_referenced(m);
+		} else {
+			KASSERT(!pmap_page_is_mapped(m),
+			    ("vm_pageout_scan: page %p is mapped", m));
+		}
+
+		/*
+		 * If the upper level VM system knows about any page 
+		 * references, we reactivate the page or requeue it.
+		 */
+		if (act_delta != 0) {
+			if (object->ref_count) {
+				vm_page_activate(m);
+				m->act_count += act_delta + ACT_ADVANCE;
+			} else {
+				vm_pagequeue_lock(pq);
+				queues_locked = TRUE;
+				vm_page_requeue_locked(m);
+			}
+			VM_OBJECT_WUNLOCK(object);
+			vm_page_unlock(m);
+			goto relock_queues;
+		}
+
+		if (m->hold_count != 0) {
+			vm_page_unlock(m);
+			VM_OBJECT_WUNLOCK(object);
+
+			/*
+			 * Held pages are essentially stuck in the
+			 * queue.  So, they ought to be discounted
+			 * from the inactive count.  See the
+			 * calculation of the page_shortage for the
+			 * loop over the active queue below.
+			 */
+			addl_page_shortage++;
+			goto relock_queues;
+		}
+
+		/*
+		 * If the page appears to be clean at the machine-independent
+		 * layer, then remove all of its mappings from the pmap in
+		 * anticipation of placing it onto the cache queue.  If,
+		 * however, any of the page's mappings allow write access,
+		 * then the page may still be modified until the last of those
+		 * mappings are removed.
+		 */
+		vm_page_test_dirty(m);
+		if (m->dirty == 0 && object->ref_count != 0)
+			pmap_remove_all(m);
+
+		if (m->valid == 0) {
+			/*
+			 * Invalid pages can be easily freed
+			 */
+			vm_page_free2(m);
+			PCPU_INC(cnt.v_dfree);
+			--page_shortage;
+			vmd->vmd_cached++;
+		} else if (m->dirty == 0) {
+			/*
+			 * Clean pages can be placed onto the cache queue.
+			 * This effectively frees them.
+			 */
+			vm_page_cache(m);
+			--page_shortage;
+			vmd->vmd_cached++;
+		} else if ((m->flags & PG_WINATCFLS) == 0 && pass < 2) {
+			/*
+			 * Dirty pages need to be paged out, but flushing
+			 * a page is extremely expensive verses freeing
+			 * a clean page.  Rather then artificially limiting
+			 * the number of pages we can flush, we instead give
+			 * dirty pages extra priority on the inactive queue
+			 * by forcing them to be cycled through the queue
+			 * twice before being flushed, after which the
+			 * (now clean) page will cycle through once more
+			 * before being freed.  This significantly extends
+			 * the thrash point for a heavily loaded machine.
+			 */
+			m->flags |= PG_WINATCFLS;
+			vm_pagequeue_lock(pq);
+			queues_locked = TRUE;
+			vm_page_requeue_locked(m);
+		} else if (maxlaunder > 0) {
+			/*
+			 * We always want to try to flush some dirty pages if
+			 * we encounter them, to keep the system stable.
+			 * Normally this number is small, but under extreme
+			 * pressure where there are insufficient clean pages
+			 * on the inactive queue, we may have to go all out.
+			 */
+			int swap_pageouts_ok;
+			struct vnode *vp = NULL;
+			struct mount *mp = NULL;
+
+			if ((object->type != OBJT_SWAP) && (object->type != OBJT_DEFAULT)) {
+				swap_pageouts_ok = 1;
+			} else {
+				swap_pageouts_ok = !(defer_swap_pageouts || disable_swap_pageouts);
+				swap_pageouts_ok |= (!disable_swap_pageouts && defer_swap_pageouts &&
+				vm_page_count_min());
+										
+			}
+
+			/*
+			 * We don't bother paging objects that are "dead".  
+			 * Those objects are in a "rundown" state.
+			 */
+			if (!swap_pageouts_ok || (object->flags & OBJ_DEAD)) {
+				vm_pagequeue_lock(pq);
+				vm_page_unlock(m);
+				VM_OBJECT_WUNLOCK(object);
+				queues_locked = TRUE;
+				vm_page_requeue_locked(m);
+				goto relock_queues;
+			}
+
+			/*
+			 * The object is already known NOT to be dead.   It
+			 * is possible for the vget() to block the whole
+			 * pageout daemon, but the new low-memory handling
+			 * code should prevent it.
+			 *
+			 * The previous code skipped locked vnodes and, worse,
+			 * reordered pages in the queue.  This results in
+			 * completely non-deterministic operation and, on a
+			 * busy system, can lead to extremely non-optimal
+			 * pageouts.  For example, it can cause clean pages
+			 * to be freed and dirty pages to be moved to the end
+			 * of the queue.  Since dirty pages are also moved to
+			 * the end of the queue once-cleaned, this gives
+			 * way too large a weighting to defering the freeing
+			 * of dirty pages.
+			 *
+			 * We can't wait forever for the vnode lock, we might
+			 * deadlock due to a vn_read() getting stuck in
+			 * vm_wait while holding this vnode.  We skip the 
+			 * vnode if we can't get it in a reasonable amount
+			 * of time.
+			 */
+			if (object->type == OBJT_VNODE) {
+				vm_page_unlock(m);
+				vp = object->handle;
+				if (vp->v_type == VREG &&
+				    vn_start_write(vp, &mp, V_NOWAIT) != 0) {
+					mp = NULL;
+					++pageout_lock_miss;
+					if (object->flags & OBJ_MIGHTBEDIRTY)
+						vnodes_skipped++;
+					goto unlock_and_continue;
+				}
+				KASSERT(mp != NULL,
+				    ("vp %p with NULL v_mount", vp));
+				vm_object_reference_locked(object);
+				VM_OBJECT_WUNLOCK(object);
+				lockmode = MNT_SHARED_WRITES(vp->v_mount) ?
+				    LK_SHARED : LK_EXCLUSIVE;
+				if (vget(vp, lockmode | LK_TIMELOCK,
+				    curthread)) {
+					VM_OBJECT_WLOCK(object);
+					++pageout_lock_miss;
+					if (object->flags & OBJ_MIGHTBEDIRTY)
+						vnodes_skipped++;
+					vp = NULL;
+					goto unlock_and_continue;
+				}
+				VM_OBJECT_WLOCK(object);
+				vm_page_lock(m);
+				vm_pagequeue_lock(pq);
+				queues_locked = TRUE;
+				/*
+				 * The page might have been moved to another
+				 * queue during potential blocking in vget()
+				 * above.  The page might have been freed and
+				 * reused for another vnode.
+				 */
+				if (m->queue != PQ_INACTIVE ||
+				    m->object != object ||
+				    TAILQ_NEXT(m, plinks.q) != &vmd->vmd_marker) {
+					vm_page_unlock(m);
+					if (object->flags & OBJ_MIGHTBEDIRTY)
+						vnodes_skipped++;
+					goto unlock_and_continue;
+				}
+	
+				/*
+				 * The page may have been busied during the
+				 * blocking in vget().  We don't move the
+				 * page back onto the end of the queue so that
+				 * statistics are more correct if we don't.
+				 */
+				if (vm_page_busied(m)) {
+					vm_page_unlock(m);
+					addl_page_shortage++;
+					goto unlock_and_continue;
+				}
+
+				/*
+				 * If the page has become held it might
+				 * be undergoing I/O, so skip it
+				 */
+				if (m->hold_count != 0) {
+					vm_page_unlock(m);
+					addl_page_shortage++;
+					if (object->flags & OBJ_MIGHTBEDIRTY)
+						vnodes_skipped++;
+					goto unlock_and_continue;
+				}
+				vm_pagequeue_unlock(pq);
+				queues_locked = FALSE;
+			}
+
+			/*
+			 * If a page is dirty, then it is either being washed
+			 * (but not yet cleaned) or it is still in the
+			 * laundry.  If it is still in the laundry, then we
+			 * start the cleaning operation. 
+			 *
+			 * decrement page_shortage on success to account for
+			 * the (future) cleaned page.  Otherwise we could wind
+			 * up laundering or cleaning too many pages.
+			 */
+			if (vm_pageout_clean(m) != 0) {
+				--page_shortage;
+				--maxlaunder;
+				vmd->vmd_flushed++;
+			}
+unlock_and_continue:
+			vm_page_lock_assert(m, MA_NOTOWNED);
+			VM_OBJECT_WUNLOCK(object);
+			if (mp != NULL) {
+				if (queues_locked) {
+					vm_pagequeue_unlock(pq);
+					queues_locked = FALSE;
+				}
+				if (vp != NULL)
+					vput(vp);
+				vm_object_deallocate(object);
+				vn_finished_write(mp);
+			}
+			vm_page_lock_assert(m, MA_NOTOWNED);
+			goto relock_queues;
+		}
+		vm_page_unlock(m);
+		VM_OBJECT_WUNLOCK(object);
+relock_queues:
+		if (!queues_locked) {
+			vm_pagequeue_lock(pq);
+			queues_locked = TRUE;
+		}
+		next = TAILQ_NEXT(&vmd->vmd_marker, plinks.q);
+		TAILQ_REMOVE(&pq->pq_pl, &vmd->vmd_marker, plinks.q);
+	}
+	vm_pagequeue_unlock(pq);
+
+#if !defined(NO_SWAPPING)
+	/*
+	 * Wakeup the swapout daemon if we didn't cache or free the targeted
+	 * number of pages. 
+	 */
+	if (vm_swap_enabled && page_shortage > 0)
+		vm_req_vmdaemon(VM_SWAP_NORMAL);
+#endif
+
+	/*
+	 * Wakeup the sync daemon if we skipped a vnode in a writeable object
+	 * and we didn't cache or free enough pages.
+	 */
+	if (vnodes_skipped > 0 && page_shortage > cnt.v_free_target -
+	    cnt.v_free_min)
+		(void)speedup_syncer();
+
+	/*
+	 * Compute the number of pages we want to try to move from the
+	 * active queue to the inactive queue.
+	 */
+	page_shortage = cnt.v_inactive_target - cnt.v_inactive_count +
+	    vm_paging_target() + deficit + addl_page_shortage;
+
+	pq = &vmd->vmd_pagequeues[PQ_ACTIVE];
+	vm_pagequeue_lock(pq);
+	maxscan = pq->pq_cnt;
+
+	/*
+	 * If we're just idle polling attempt to visit every
+	 * active page within 'update_period' seconds.
+	 */
+	if (pass == 0 && vm_pageout_update_period != 0) {
+		maxscan /= vm_pageout_update_period;
+		page_shortage = maxscan;
+	}
+
+	/*
+	 * Scan the active queue for things we can deactivate. We nominally
+	 * track the per-page activity counter and use it to locate
+	 * deactivation candidates.
+	 */
+	m = TAILQ_FIRST(&pq->pq_pl);
+	while (m != NULL && maxscan-- > 0 && page_shortage > 0) {
+
+		KASSERT(m->queue == PQ_ACTIVE,
+		    ("vm_pageout_scan: page %p isn't active", m));
+
+		next = TAILQ_NEXT(m, plinks.q);
+		if ((m->flags & PG_MARKER) != 0) {
+			m = next;
+			continue;
+		}
+		KASSERT((m->flags & PG_FICTITIOUS) == 0,
+		    ("Fictitious page %p cannot be in active queue", m));
+		KASSERT((m->oflags & VPO_UNMANAGED) == 0,
+		    ("Unmanaged page %p cannot be in active queue", m));
+		if (!vm_pageout_page_lock(m, &next)) {
+			vm_page_unlock(m);
+			m = next;
+			continue;
+		}
+
+		/*
+		 * The count for pagedaemon pages is done after checking the
+		 * page for eligibility...
+		 */
+		PCPU_INC(cnt.v_pdpages);
+		vmd->vmd_scanned++;
+
+		/*
+		 * Check to see "how much" the page has been used.
+		 */
+		act_delta = 0;
+		if (m->aflags & PGA_REFERENCED) {
+			vm_page_aflag_clear(m, PGA_REFERENCED);
+			act_delta += 1;
+		}
+		/*
+		 * Unlocked object ref count check.  Two races are possible.
+		 * 1) The ref was transitioning to zero and we saw non-zero,
+		 *    the pmap bits will be checked unnecessarily.
+		 * 2) The ref was transitioning to one and we saw zero. 
+		 *    The page lock prevents a new reference to this page so
+		 *    we need not check the reference bits.
+		 */
+		if (m->object->ref_count != 0)
+			act_delta += pmap_ts_referenced(m);
+
+		/*
+		 * Advance or decay the act_count based on recent usage.
+		 */
+		if (act_delta) {
+			m->act_count += ACT_ADVANCE + act_delta;
+			if (m->act_count > ACT_MAX)
+				m->act_count = ACT_MAX;
+		} else {
+			m->act_count /= 2;
+			act_delta = m->act_count;
+		}
+
+		/*
+		 * Move this page to the front of the active or inactive
+		 * queue depending on usage.
+		 */
+		if (act_delta == 0) {
+			/* Dequeue to avoid later lock recursion. */
+			vm_page_dequeue_locked(m);
+			vm_page_deactivate2(m);
+			page_shortage--;
+			vmd->vmd_deactivated++;
+		} else
+			vm_page_requeue_locked2(m);
+		vm_page_unlock(m);
+		m = next;
+	}
+	vm_pagequeue_unlock(pq);
+#if !defined(NO_SWAPPING)
+	/*
+	 * Idle process swapout -- run once per second.
+	 */
+	if (vm_swap_idle_enabled) {
+		static long lsec;
+		if (time_second != lsec) {
+			vm_req_vmdaemon(VM_SWAP_IDLE);
+			lsec = time_second;
+		}
+	}
+#endif
+
+	/*
+	 * If we are critically low on one of RAM or swap and low on
+	 * the other, kill the largest process.  However, we avoid
+	 * doing this on the first pass in order to give ourselves a
+	 * chance to flush out dirty vnode-backed pages and to allow
+	 * active pages to be moved to the inactive queue and reclaimed.
+	 */
+	vm_pageout_mightbe_oom(vmd, pass);
+}
+
+/*
+ *	vm_pageout_scan does the dirty work for the pageout daemon.
+ *
+ *	pass 0 - Update active LRU/deactivate pages
+ *	pass 1 - Move inactive to cache or free
+ *	pass 2 - Launder dirty pages
+ */
+static void
+vm_pageout_scan_old(struct vm_domain *vmd, int pass)
 {
 	vm_page_t m, next;
 	struct vm_pagequeue *pq;

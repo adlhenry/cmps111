@@ -427,6 +427,7 @@ void vm_page_flash(vm_page_t m);
 void vm_page_hold(vm_page_t mem);
 void vm_page_unhold(vm_page_t mem);
 void vm_page_free(vm_page_t m);
+void vm_page_free2(vm_page_t m);
 void vm_page_free_zero(vm_page_t m);
 
 void vm_page_activate (vm_page_t);
@@ -443,6 +444,7 @@ void vm_page_cache_transfer(vm_object_t, vm_pindex_t, vm_object_t);
 int vm_page_try_to_cache (vm_page_t);
 int vm_page_try_to_free (vm_page_t);
 void vm_page_deactivate (vm_page_t);
+void vm_page_deactivate2 (vm_page_t);
 void vm_page_dequeue(vm_page_t m);
 void vm_page_dequeue_locked(vm_page_t m);
 vm_page_t vm_page_find_least(vm_object_t, vm_pindex_t);
@@ -465,6 +467,7 @@ vm_page_t vm_page_replace(vm_page_t mnew, vm_object_t object,
     vm_pindex_t pindex);
 void vm_page_requeue(vm_page_t m);
 void vm_page_requeue_locked(vm_page_t m);
+void vm_page_requeue_locked2(vm_page_t m);
 int vm_page_sbusied(vm_page_t m);
 void vm_page_set_valid_range(vm_page_t m, int base, int size);
 int vm_page_sleep_if_busy(vm_page_t m, const char *msg);

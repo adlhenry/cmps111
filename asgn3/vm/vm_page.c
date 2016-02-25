@@ -845,6 +845,19 @@ vm_page_free(vm_page_t m)
 }
 
 /*
+ *	vm_page_free2:
+ *
+ *	Free a page. Place it at the rear of the free queue.
+ */
+void
+vm_page_free2(vm_page_t m)
+{
+
+	m->flags &= ~PG_ZERO;
+	vm_page_free_toq(m);
+}
+
+/*
  *	vm_page_free_zero:
  *
  *	Free a page to the zerod-pages queue
@@ -2159,6 +2172,26 @@ vm_page_requeue_locked(vm_page_t m)
 }
 
 /*
+ *	vm_page_requeue_locked2:
+ *
+ *	Move the given page to the front of its current page queue.
+ *
+ *	The page queue must be locked.
+ */
+void
+vm_page_requeue_locked2(vm_page_t m)
+{
+	struct vm_pagequeue *pq;
+
+	KASSERT(m->queue != PQ_NONE,
+	    ("vm_page_requeue_locked: page %p is not queued", m));
+	pq = vm_page_pagequeue(m);
+	vm_pagequeue_assert_locked(pq);
+	TAILQ_REMOVE(&pq->pq_pl, m, plinks.q);
+	TAILQ_INSERT_TAIL(&pq->pq_pl, m, plinks.q);
+}
+
+/*
  *	vm_page_activate:
  *
  *	Put the specified page on the active list (if appropriate).
@@ -2463,6 +2496,18 @@ _vm_page_deactivate(vm_page_t m, int athead)
  */
 void
 vm_page_deactivate(vm_page_t m)
+{
+
+	_vm_page_deactivate(m, 0);
+}
+
+/*
+ * Move the specified page to the front of the inactive queue.
+ *
+ * The page must be locked.
+ */
+void
+vm_page_deactivate2(vm_page_t m)
 {
 
 	_vm_page_deactivate(m, 0);
