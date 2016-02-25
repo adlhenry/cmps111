@@ -909,14 +909,12 @@ vm_pageout_map_deactivate_pages(map, desired)
 }
 #endif		/* !defined(NO_SWAPPING) */
 
-static void vm_pageout_resetstats(struct vm_domain *vmd);
-static void vm_pageout_log(struct vm_domain *vmd);
 static void vm_pageout_scan_old(struct vm_domain *vmd, int pass)
 
 /*
 * Reset pageout statistics.
 */
-static void
+static inline void
 vm_pageout_resetstats(struct vm_domain *vmd)
 {
 	vmd->vmd_scanned = 0;
@@ -928,7 +926,7 @@ vm_pageout_resetstats(struct vm_domain *vmd)
 /*
 * Log pageout statistics for a single run.
 */
-static void
+static inline void
 vm_pageout_log(struct vm_domain *vmd)
 {
 	log(LOG_INFO, "%5u %5u %5u %5u", vmd->vmd_scanned, vmd->vmd_deactivated,
@@ -937,13 +935,14 @@ vm_pageout_log(struct vm_domain *vmd)
 
 /*
  *	vm_pageout_scan does the dirty work for the pageout daemon.
+ *	This algorithm has been modified to implement SLIM CHANCE.
  *
  *	pass 0 - Update active LRU/deactivate pages
  *	pass 1 - Move inactive to cache or free
  *	pass 2 - Launder dirty pages
  */
 static void
-vm_pageout_scan(struct vm_domain *vmd, int pass)
+vm_pageout_scan_old(struct vm_domain *vmd, int pass)
 {
 	vm_page_t m, next;
 	struct vm_pagequeue *pq;
@@ -1499,7 +1498,7 @@ relock_queues:
  *	pass 2 - Launder dirty pages
  */
 static void
-vm_pageout_scan_old(struct vm_domain *vmd, int pass)
+vm_pageout_scan(struct vm_domain *vmd, int pass)
 {
 	vm_page_t m, next;
 	struct vm_pagequeue *pq;
