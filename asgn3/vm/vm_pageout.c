@@ -909,7 +909,7 @@ vm_pageout_map_deactivate_pages(map, desired)
 }
 #endif		/* !defined(NO_SWAPPING) */
 
-static void vm_pageout_scan_old(struct vm_domain *vmd, int pass)
+static void vm_pageout_scan_old(struct vm_domain *vmd, int pass);
 
 /*
 * Reset pageout statistics.
