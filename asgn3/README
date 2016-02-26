@@ -16,4 +16,14 @@ TEST
 	cat /var/log/messages
 
 CONTRIBUTION
+	As the sole contributor, I was responsible for all source code and
+	testing of the project. I wrote the statistics logging for the default
+	and modified pageout daemon. I also wrote the modifications to the
+	existing pageout daemon that allowed to behave according to the rules
+	of the slim chance algorithm.
 	
+	After gathering statistics from both the default pageout daemon and the
+	modified version, I graphed the results in the write-up. The analysis
+	and postulation found in the write-up report were also written by me.
+	In addition to the write-up, I also authored all other documentation
+	including the design document and this README.

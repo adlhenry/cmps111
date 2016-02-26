@@ -43,7 +43,9 @@ vm_pageout.c
 	vm_pageout_log()
 		purpose - print page daemon statistics to the system log
 		inputs - pointer to a struct vm_domain
-		outputs - text to the file /var/log/messages
+		outputs - text to the file /var/log/messages in the following format:
+				  [total scanned] : (active scan) (inactive scan) : 
+				  (deactivated) (reactivated) (cached/freed) (flushed)
 		assumptions - the pointer to the struct vm_domain is non-null
 		
 	vm_pageout_scan()
@@ -72,3 +74,17 @@ vm_page.c
 		inputs - a vm_page_t
 		outputs - none
 		assumptions - the page's queue is locked
+		
+	vm_page_free_toq2()
+		purpose - move a page to the rear of the free queue
+		inputs - a vm_page_t
+		outputs - none
+		assumptions - the page must be locked if managed
+		
+vm_phys.c
+	vm_phys_free_pages2()
+		purpose - free a contiguous, power of two-sized set of physical
+				  pages
+		inputs - a vm_page_t and an integer
+		outputs - none
+		assumptions - the free page queues must be locked
