@@ -2370,7 +2370,7 @@ vm_page_free_toq(vm_page_t m)
  *
  *	The object must be locked.  The page must be locked if it is managed.
  */
-static inline void
+void
 vm_page_free_toq2(vm_page_t m)
 {
 
