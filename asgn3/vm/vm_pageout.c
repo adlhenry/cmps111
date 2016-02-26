@@ -917,7 +917,8 @@ static void vm_pageout_scan_old(struct vm_domain *vmd, int pass);
 static inline void
 vm_pageout_resetstats(struct vm_domain *vmd)
 {
-	vmd->vmd_scanned = 0;
+	vmd->vmd_scanned_active = 0;
+	vmd->vmd_scanned_inactive = 0;
 	vmd->vmd_deactivated = 0;
 	vmd->vmd_reactivated = 0;
 	vmd->vmd_cached = 0;
@@ -929,18 +930,12 @@ vm_pageout_resetstats(struct vm_domain *vmd)
 */
 static inline void
 vm_pageout_log(struct vm_domain *vmd)
-{
-	/*
-	log(LOG_INFO, "%7u %7u %7u %7u %7u",
-		cnt.v_wire_count,
-		cnt.v_active_count,
-		cnt.v_inactive_count,
-		cnt.v_cache_count,
-		cnt.v_free_count);
-	*/
-	
-	log(LOG_INFO, "%7u %7u %7u %7u %7u",
-		vmd->vmd_scanned,
+{	
+	log(LOG_INFO, "[%7u] : %7u %7u : %7u %7u %7u %7u",
+		vmd->vmd_scanned_active + 
+		vmd->vmd_scanned_inactive,
+		vmd->vmd_scanned_active,
+		vmd->vmd_scanned_inactive,
 		vmd->vmd_deactivated,
 		vmd->vmd_reactivated,
 		vmd->vmd_cached,
@@ -1039,7 +1034,7 @@ vm_pageout_scan_old(struct vm_domain *vmd, int pass)
 
 		PCPU_INC(cnt.v_pdpages);
 		next = TAILQ_NEXT(m, plinks.q);
-		vmd->vmd_scanned++;
+		vmd->vmd_scanned_inactive++;
 
 		/*
 		 * skip marker pages
@@ -1433,7 +1428,7 @@ relock_queues:
 		 * page for eligibility...
 		 */
 		PCPU_INC(cnt.v_pdpages);
-		vmd->vmd_scanned++;
+		vmd->vmd_scanned_active++;
 
 		/*
 		 * Check to see "how much" the page has been used.
@@ -1596,7 +1591,7 @@ vm_pageout_scan(struct vm_domain *vmd, int pass)
 
 		PCPU_INC(cnt.v_pdpages);
 		next = TAILQ_NEXT(m, plinks.q);
-		vmd->vmd_scanned++;
+		vmd->vmd_scanned_inactive++;
 
 		/*
 		 * skip marker pages
@@ -1679,6 +1674,7 @@ vm_pageout_scan(struct vm_domain *vmd, int pass)
 			if (object->ref_count) {
 				vm_page_activate(m);
 				m->act_count += act_delta + ACT_ADVANCE;
+				vmd->vmd_reactivated++;
 			} else {
 				vm_pagequeue_lock(pq);
 				queues_locked = TRUE;
@@ -1989,7 +1985,7 @@ relock_queues:
 		 * page for eligibility...
 		 */
 		PCPU_INC(cnt.v_pdpages);
-		vmd->vmd_scanned++;
+		vmd->vmd_scanned_active++;
 
 		/*
 		 * Check to see "how much" the page has been used.

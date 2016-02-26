@@ -810,6 +810,51 @@ vm_phys_free_pages(vm_page_t m, int order)
 }
 
 /*
+ * Free a contiguous, power of two-sized set of physical pages.
+ *
+ * The free page queues must be locked.
+ */
+void
+vm_phys_free_pages2(vm_page_t m, int order)
+{
+	struct vm_freelist *fl;
+	struct vm_phys_seg *seg;
+	vm_paddr_t pa;
+	vm_page_t m_buddy;
+
+	KASSERT(m->order == VM_NFREEORDER,
+	    ("vm_phys_free_pages: page %p has unexpected order %d",
+	    m, m->order));
+	KASSERT(m->pool < VM_NFREEPOOL,
+	    ("vm_phys_free_pages: page %p has unexpected pool %d",
+	    m, m->pool));
+	KASSERT(order < VM_NFREEORDER,
+	    ("vm_phys_free_pages: order %d is out of range", order));
+	mtx_assert(&vm_page_queue_free_mtx, MA_OWNED);
+	seg = &vm_phys_segs[m->segind];
+	if (order < VM_NFREEORDER - 1) {
+		pa = VM_PAGE_TO_PHYS(m);
+		do {
+			pa ^= ((vm_paddr_t)1 << (PAGE_SHIFT + order));
+			if (pa < seg->start || pa >= seg->end)
+				break;
+			m_buddy = &seg->first_page[atop(pa - seg->start)];
+			if (m_buddy->order != order)
+				break;
+			fl = (*seg->free_queues)[m_buddy->pool];
+			vm_freelist_rem(fl, m_buddy, order);
+			if (m_buddy->pool != m->pool)
+				vm_phys_set_pool(m->pool, m_buddy, order);
+			order++;
+			pa &= ~(((vm_paddr_t)1 << (PAGE_SHIFT + order)) - 1);
+			m = &seg->first_page[atop(pa - seg->start)];
+		} while (order < VM_NFREEORDER - 1);
+	}
+	fl = (*seg->free_queues)[m->pool];
+	vm_freelist_add(fl, m, order, 0);
+}
+
+/*
  * Free a contiguous, arbitrarily sized set of physical pages.
  *
  * The free page queues must be locked.

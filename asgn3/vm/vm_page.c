@@ -261,7 +261,8 @@ vm_page_domain_init(struct vm_domain *vmd)
 	    &cnt.v_active_count;
 	vmd->vmd_page_count = 0;
 	vmd->vmd_free_count = 0;
-	vmd->vmd_scanned = 0;
+	vmd->vmd_scanned_active = 0;
+	vmd->vmd_scanned_inactive = 0;
 	vmd->vmd_deactivated = 0;
 	vmd->vmd_reactivated = 0;
 	vmd->vmd_cached = 0;
@@ -855,7 +856,7 @@ vm_page_free2(vm_page_t m)
 {
 
 	m->flags &= ~PG_ZERO;
-	vm_page_free_toq(m);
+	vm_page_free_toq2(m);
 }
 
 /*
@@ -2352,6 +2353,88 @@ vm_page_free_toq(vm_page_t m)
 		if (TRUE)
 #endif
 			vm_phys_free_pages(m, 0);
+		if ((m->flags & PG_ZERO) != 0)
+			++vm_page_zero_count;
+		else
+			vm_page_zero_idle_wakeup();
+		vm_page_free_wakeup();
+		mtx_unlock(&vm_page_queue_free_mtx);
+	}
+}
+
+/*
+ *	vm_page_free_toq2:
+ *
+ *	Returns the given page to the rear of the free list,
+ *	disassociating it with any VM object.
+ *
+ *	The object must be locked.  The page must be locked if it is managed.
+ */
+void
+vm_page_free_toq2(vm_page_t m)
+{
+
+	if ((m->oflags & VPO_UNMANAGED) == 0) {
+		vm_page_lock_assert(m, MA_OWNED);
+		KASSERT(!pmap_page_is_mapped(m),
+		    ("vm_page_free_toq: freeing mapped page %p", m));
+	} else
+		KASSERT(m->queue == PQ_NONE,
+		    ("vm_page_free_toq: unmanaged page %p is queued", m));
+	PCPU_INC(cnt.v_tfree);
+
+	if (VM_PAGE_IS_FREE(m))
+		panic("vm_page_free: freeing free page %p", m);
+	else if (vm_page_sbusied(m))
+		panic("vm_page_free: freeing busy page %p", m);
+
+	/*
+	 * Unqueue, then remove page.  Note that we cannot destroy
+	 * the page here because we do not want to call the pager's
+	 * callback routine until after we've put the page on the
+	 * appropriate free queue.
+	 */
+	vm_page_remque(m);
+	vm_page_remove(m);
+
+	/*
+	 * If fictitious remove object association and
+	 * return, otherwise delay object association removal.
+	 */
+	if ((m->flags & PG_FICTITIOUS) != 0) {
+		return;
+	}
+
+	m->valid = 0;
+	vm_page_undirty(m);
+
+	if (m->wire_count != 0)
+		panic("vm_page_free: freeing wired page %p", m);
+	if (m->hold_count != 0) {
+		m->flags &= ~PG_ZERO;
+		KASSERT((m->flags & PG_UNHOLDFREE) == 0,
+		    ("vm_page_free: freeing PG_UNHOLDFREE page %p", m));
+		m->flags |= PG_UNHOLDFREE;
+	} else {
+		/*
+		 * Restore the default memory attribute to the page.
+		 */
+		if (pmap_page_get_memattr(m) != VM_MEMATTR_DEFAULT)
+			pmap_page_set_memattr(m, VM_MEMATTR_DEFAULT);
+
+		/*
+		 * Insert the page into the physical memory allocator's
+		 * cache/free page queues.
+		 */
+		mtx_lock(&vm_page_queue_free_mtx);
+		m->flags |= PG_FREE;
+		vm_phys_freecnt_adj(m, 1);
+#if VM_NRESERVLEVEL > 0
+		if (!vm_reserv_free_page(m))
+#else
+		if (TRUE)
+#endif
+			vm_phys_free_pages2(m, 0);
 		if ((m->flags & PG_ZERO) != 0)
 			++vm_page_zero_count;
 		else

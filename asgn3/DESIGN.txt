@@ -16,7 +16,8 @@ SYNOPSIS
 	
 DATA
 vm_page.h
-	vmd_scanned - count of pages scanned
+	vmd_scanned_active - count of pages scanned in the active queue
+	vmd_scanned_inactive - count of pages scanned in the inactive queue
 	vmd_deactivated - count of pages moved from the active queue to
 					  the inactive queue
 	vmd_reactivated - count of pages moved from the inactive queue to 
@@ -25,6 +26,10 @@ vm_page.h
 				 the cache queue
 	vmd_flushed - count of pages moved from the inactive queue to
 				  the free queue
+	
+vm_pageout.c
+	vm_pageout_update_period - minimum period in seconds over which to scan all
+							   pages in the active queue (set to 10 seconds)
 	
 FUNCTIONS
 vm_pageout.c
@@ -42,17 +47,19 @@ vm_pageout.c
 		assumptions - the pointer to the struct vm_domain is non-null
 		
 	vm_pageout_scan()
-		purpose - 
-		inputs - 
-		outputs - 
-		assumptions - 
+		purpose - scans active and inactive queues and finds pages to
+				  move from active to inactive queues and from the inactive
+				  queue to the cache / free queues
+		inputs - a pointer to a struct vm_domain and an integer
+		outputs - sets global variables for scanned and moved pages
+		assumptions - the struct vm_domain pointer is non-null
 	
 vm_page.c
 	vm_page_free2()
 		purpose - move a page to the rear of the free queue
 		inputs - a vm_page_t
 		outputs - none
-		assumptions - the page is nonbusy and eligible to be freed
+		assumptions - the page is not busy and eligible to be freed
 		
 	vm_page_deactivate2()
 		purpose - move a page to the front of the inactive queue

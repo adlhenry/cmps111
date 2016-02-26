@@ -224,7 +224,8 @@ struct vm_domain {
 	struct vm_pagequeue vmd_pagequeues[PQ_COUNT];
 	u_int vmd_page_count;
 	u_int vmd_free_count;
-	u_int vmd_scanned;
+	u_int vmd_scanned_active;
+	u_int vmd_scanned_inactive;
 	u_int vmd_deactivated;
 	u_int vmd_reactivated;
 	u_int vmd_cached;
