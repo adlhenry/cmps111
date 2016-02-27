@@ -45,12 +45,17 @@
 			one key for each pair distributed widely
 			one key of each pair kept secret
 			keys are inverses of each other, but not identical
-	RSA algortihm for public key encryption
+	RSA algorithm for public key encryption
 		private, public key pair consists of KR = (d,n), KU = (e,n)
-			n = pxq (p and q are large prime numbers)
-			e is a randomly chosen integer with GCD
-			d is an integer 
-		
+			n = p x q (p and q are large prime numbers)
+			e is a randomly chosen integer with GCD (d, (p-1)(q-1)) = 1
+			d is an integer that (e x d) MOD ((p-1)x(q-1)) = 1
+		p and q aren't published
+		public key published and can be used to send a message
+		to the private keys owner
+		encryption and decryption are the same algorithm:
+		E(KR, M) = M^e MOD n
+		exponentiation slow, so not done with large messages
 	One-way functions
 		functions such that
 			given formula for f(fx), easy to evaluate y = h(x)
@@ -73,11 +78,15 @@
 			comparing the two results
 	Pretty Good Privacy (PGP)
 		uses public encryption
+			facilitate key distribution
+			allow messages to be sent to encrypted (public key)
+			all messages to be sent from encrypted (private key)
 		public key encryption is very slow
 		use public key encryption to exchange a shared key
 			shared key is relatively short (~128 bits)
 			message encrypted using symmetric key encryption
 		PGP can also be used to authenticate sender
+			use digital signature and send messages as plaintext
 	Diffie-Helman Algorithm
 		
 	User authentication
@@ -86,7 +95,8 @@
 			something the user has
 			something the user is
 	Authentication using passwords
-		
+		don't notify user of incorrect user name until after
+		password entered
 	Dealing with passwords
 		passwords should be memorable
 		passwords shouldn't be stored "in the clear"
@@ -98,7 +108,16 @@
 			- knowing the hashed value and hash function gives
 			no clue to the original password
 	Salting the passwords
-		
+		passwords can be guessed
+			build table of all dictionary words, names, etc.
+				table has each potential password in both plain and hashed form
+			hacker gets copy of password file
+				for each entry in password file see if password in above table
+				if it is, password found
+		use salt
+			random characters added to password before hashing
+			salt characters stored "in the clear"
+			increase number of possible hash values for given password
 	One-time passwords
 		often implemented using one-way hash chain
 		server is initialized with the list of passwords (or just n)
@@ -109,15 +128,180 @@
 			stores a password encoded in the magnetic strip
 			allows for longer, harder to memorize passwords
 		smart card
-			card has secret encoded
+			card has secret encoded on it, but not externally readable
+			remote computer issues challenge to card
+			smart card computes response and proves it knows secret
 	Two-factor authentication: OAuth
 		additional "password" using a hardware token
 		server and token share a (long) secret
 		token computes
 	Authentication using biometrics
-				
+		use basic body properties to prove identity
+		examples
+			fingerprints
+			voice
+			hand size
+			retina patterns
+			iris patterns
+			facial features
+		problems
+			duplicates
+			stealing original
 	
 2/24/16:
+	Countermeasures
+		limiting times someone can log in
+		automatic callback at number prespecified
+		limiting number of login attempts
+		a database of all logins
+		simple login name/password as trap
+			security personnel notified when attacker bites
+			variation: allow anyone to "log in", but
+			don't let intruders do anything useful
+	Trojan horses
+		free program
+			contains harmful code
+			may do something useful
+		altered version of utility program
+			trick user into running program
+	Login spoofing
+		no difference between real and phony screens
+		user logs into phony screen
+			screen records user name and password
+			screen print "login incorrect" and starts real screen
+			user reattempts login
+		solution: don't allow certain characters to be "caught"
+	Logic bombs
+		Programmer writes (complex) program
+			ensure job security
+			embeds logic "flaws" that are triggered if certain
+			things aren't done
+				enters password regularly
+				adds a bit of code to fix things
+				provides a certain set of inputs
+				programmer's name appears on payroll
+			if conditions not met
+				program fails to work
+				program does damage
+			programmer can blackmail employer
+	Trap doors
+		user's access privileges coded into program
+	Buffer overflow
+		buffer overflow source of bugs in OSs
+			most common in user programs that help OS do something
+			may appear in "trusted" daemons
+		exploited by modifying stack to
+			return different address than intended
+			included code that does something malicious
+		accomplished by writing past the end of a buffer on the stack
+	Generic security attacks
+		request memory, disk space, tapes and just readable
+		try illegal system calls
+		start a login and hit DEL, RUBOUT, or BREAK
+		try modifying complex OS structures
+		try to do specified DO NOTs
+		social engineering
+			- convince a system programmer to add a trap door
+			- beg admin's secretary (or other people) to help a poor
+			user who forgot password
+			- pretend you're tech support and ask random users for
+			their help debugging a problem\
+	Security flaws: TENEX password problem
+		put password across page boundary
+			first letter on resident page, others on non-resident page
+		try different first letters
+			if bad password before page fault, letter wrong
+			if bad password after page fault, letter correct
+		shift password up one character and repeat process
+		guess password in O(kn) vs O(K^n) time for k different symbols
+		and an n-symbol password
+	Design principles for security
+		system design should be public
+		default should be no access
+		check for current authority
+		give each process least privilege possible
+		protection mechanism should be
+			simple
+			uniform
+			in lowest layers of system
+		scheme should be psychologically acceptable
+	Security in networked world
+		external threat
+			code transmitted to target machine
+			code executed there, doing damage
+		goals of virus writer
+			quickly spread virus
+			difficult to detect
+			hard to get rid of
+			optional: do something malicious
+		virus: embeds itself into other code
+		to reproduce and do its job
+	Virus damage scenarios
+		blackmail
+		denial of service
+		permanently damage hardware
+		target competitors computer
+			do harm / espionage
+		intra-corporate tricks
+			practical joke
+			sabotage other officer's files
+	How viruses work
+		virus language
+			assembly language - infect programs
+			macro language - infect email and other documents
+				runs when email reader / browser opens message
+		inserted into another program
+			use too called a "dropper"
+			may also infect system code
+		virus dormant until program executed
+			then infect other programs
+			eventually executes its payload
+	How viruses find executable files
+		recursive procedure that finds executable files on a UNIX system
+		viruses can infect some or all files it finds
+			infect all - wider spread
+			infect some - harder to find
+	Where viruses live in the program
+		start of program
+		end of program
+		in program's free spaces
+	Viruses infecting the operating system
+		virus can capture interrupt and trap vector
+		OS retakes keyboard vector
+		virus notices and recaptures keyboard
+	How do viruses spread
+		virus placed where likely to be copied
+			popular download site
+		when copied
+			infects programs
+			may try to spread over LAN or WAN
+		attach to innocent looking email
+			when run, use mailing list to replicate
+			may mutate slightly to avoid detection
+	Hiding a virus in a file
+		add virus to end of program
+			problem file size changes
+			solution use compression
+		compressed infected program
+			decompressor - for running executable
+			compressor - for compressing newly infected binaries
+			lots of free space
+		virus easy to recognize
+	Using encryption to hide a virus
+		hide a virus by encrypting it
+			vary the key in each file
+			virus "code" varies in each infected file
+			problem - lots of common code still in the clear
+				compress / decompress
+				encrypt / decrypt
+		better: leave only decryptor and key in the clear
+			less constant per virus
+			use polymorphic code to hide these too
+	Polymorphic viruses
+		all code does same thing
+		all use different machine code
+		use "snippets" combined in random ways to hide code
 	
 2/26/16:
-	
+	How can viruses be foiled
+		
