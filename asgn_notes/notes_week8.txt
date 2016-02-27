@@ -87,8 +87,15 @@
 			message encrypted using symmetric key encryption
 		PGP can also be used to authenticate sender
 			use digital signature and send messages as plaintext
-	Diffie-Helman Algorithm
-		
+	Diffie-Hellman Algorithm
+		1. choose modulus p and base g (p is large prime and g is 
+		small primitive root modulo of p)
+		2. A sends B -> A=g^a mod p
+		3. B sends A -> B=g^b mod p
+		4. A computes s=B^a mod p
+		5. B computes s=A^b mod p
+		6. A and B both know same s (secret)
+		share p,g,A,B but not a,b,s
 	User authentication
 		use authentication to identify
 			something the user knows
@@ -304,4 +311,176 @@
 	
 2/26/16:
 	How can viruses be foiled
-		
+		integrity checkers
+			verify one-way function (hash) of program binary
+			problem - virus can change that
+		behavioral checks
+			prevent certain program behavior
+			problem - what about programs that can legitimately do these things
+		avoid viruses by
+			having good OS
+			installing only trusted software
+			using antivirus software
+			not opening email attachments
+		recovery from virus attack
+			use a backup
+			reboot from safe disk
+	Worms vs. viruses
+		viruses require other programs to run
+		worms are self-running (separate process)
+		the 1988 internet worms
+			bootstrap to upload worm
+			worm itself
+			exploited bugs in sendmail and finger
+			worm hid its existence
+			next replicated itself on new systems
+			brought the internet to a halt
+	Mobile code
+		run untrusted code without damaging system resources
+		sandboxing
+			memory divided into sandboxes
+			accesses may not cross sandbox boundaries
+			sensitive system calls not in sandbox
+		interpreted code
+			run interpreter rather than untrusted code
+			interpreter doesn't allow unsafe operations
+		signed code
+			use cryptographic techniques to sign code
+			check to ensure that mobile code signed by reputable organization
+	Security in Java
+		java is a type safe language
+			compiler rejects attempts to misuse variable
+		no real pointers
+			can't simple create a pointer and dereference it as in C
+		Checks included
+			attempts to forge pointers
+			violation of access restrictions on private class members
+			misuse of variables by type
+			generation of stack over/underflows
+			illegal conversion of variables to another type
+		applets can have specific operations restricted
+			e.g., don't allow untrusted code to access full file system
+	Protection
+		security is mostly about mechanism
+			how to enforce policies
+			policies largely independent of mechanism
+		protection is about specifying policies
+			who accesses what
+		specifications must be
+			correct, efficient, and easy to use
+	Protection domains
+		list objects with permitted operations
+		domains can share objects and permissions
+	Protection matrix
+		each domain has row in matrix
+		each object has a column in matrix
+		entry for <object, column) has permissions
+	Objects in the protection matrix
+		specify permitted operations on domains in the matrix
+			domains may or may not be able to modify themselves
+			domains can modify other domains
+			some domain transfers permitted, other not
+		allows flexibility in specifying domain permissions
+	Access control lists
+		protection domain
+			user name
+			group of users
+			other
+		access rights
+			read
+			write
+			execute
+			others
+		no entry for domain => no rights for that domain
+		OS checks permissions when access needed
+	Access control lists in the real world
+		UNIX file system
+			access list for each file has exactly three domains on it
+				user (owner)
+				group
+				others
+			rights include read, write, execute: interpreted differently
+			for directories and files
+		AFS
+			access lists only apply to directories - files inherit rights
+			from the directory they are in
+			access list may have entries on it with possible rights
+				read, write, lock (for files in directory)
+				lookup, insert, delete (for directories)
+				administer (ability to add or remove rights from the ACL)
+	Capabilities
+		each process has a capability list
+		list has on entry per object the process can access
+			object name
+			object permissions
+		objects not listed are not accessible
+		how are list secured
+			kept in kernel
+			cryptographically secured
+	Cryptographically protected capability
+		rights include generic rights (read, write, execute) and
+			copy capability
+			copy object
+			remove capability
+			destroy object
+		server has a secret and uses it to verify capabilities presented to it
+			or uses public-key signatures
+	Protecting the access matrix
+		OS must ensure that the access matrix isn't modified
+		or accessed in an unauthorized way
+		access control lists
+			reading or modifying the ACL is a system call
+			OS makes sure the desired operation is allowed
+		capability lists
+			can be handled the same way as ACLs
+			- reading and modification by OS
+			can be handed to processes and verified cryptographically
+			- may be better for distributed systems where 
+			capabilities can't be centrally checked
+	Reference monitor
+		all system calls go through the reference monitor for security checking
+	Formal models of secure systems
+		limited set of primitive operations on access matrix
+			create/delete object
+			create/delete domain
+			insert/remove right
+		primitives can be combined into protection commands
+			may not be combined arbitrarily
+		OS can enforce policies, but can't decide what policies are appropriate
+	Bell-La Padula multilevel security model
+		processes, objects have security level
+		simple security property
+			process at level k can only read objects at levels k or lower
+		* property
+			process at level k can only write objects at levels k or higher
+		prevents information leaking from higher levels to lower levels
+	Biba multilevel integrity model
+		simple integrity principles
+			a process can write only objects at its security level or lower
+			no way to plant fake information at a higher level
+		the integrity * property
+			a process can read only objects at its security level or higher
+			prevent someone from getting information from above and
+			planting it at their level
+		Biba in direct conflict with Bell-La Padula
+			difficult to implement both at the same time
+	Covert channels
+		circumvent security model by using more subtle ways of passing information
+		send data using side effects
+			allocating resources
+			using CPU
+			locking file
+			making small changes in legal data exchange
+		very difficult to plus leaks in covert channels
+	Covert channel using file locking
+		assume n+1 files accessible to both A and B
+		A sends information by
+			locking files 0..n-1 according to an n-bit quantity to be conveyed to B
+			locking file n to indicate that information is available
+		B gets information by
+			reading the lock state of files 0..n+1
+			unlocking file n to show that information was received
+		may not even need to access files (on some systems) to check lock status
+	Steganography
+		hide information in other data
+		e.g., hide encrypted info into low order bits of color values in image file
