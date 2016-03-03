@@ -5,13 +5,12 @@ SOURCE    = encrypt.c rijndael.c
 HEADER    = rijndael.h
 TEST      = test
 OBJECTS   = ${SOURCE:.c=.o}
-LREPORT   = /dev/null
 EXECBIN   = protectfile
 
 all : ${EXECBIN}
 
 ${EXECBIN} : ${OBJECTS}
-	${CC} -o $@ ${OBJECTS} -lfl
+	${CC} -o $@ ${OBJECTS}
 
 %.o : %.c
 	${CC} -c $<
@@ -23,6 +22,6 @@ clean :
 
 test: all
 	cp ${TEST} ${TEST}.orig
-	./${EXECBIN} -e 0x1234 0x5678 ${TEST}
-	./${EXECBIN} -d 0x1234 0x5678 ${TEST}
+	./${EXECBIN} 0123456789abcdef ${TEST}
+	./${EXECBIN} 0123456789abcdef ${TEST}
 	diff ${TEST} ${TEST}.orig
