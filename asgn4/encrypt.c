@@ -5,10 +5,11 @@
  *
  * This program uses CTR mode encryption.
  *
- * Usage: encrypt <key1> <key2> <file name>
+ * Usage: protectfile <key> <filename>
  *
  * Author: Ethan L. Miller (elm@cs.ucsc.edu)
  * Based on code from Philip J. Erdelsky (pje@acm.org)
+ * Extended by: Adam Henry (adlhenry@ucsc.edu)
  *
  */
 
@@ -66,17 +67,12 @@ getpassword (const char *password, unsigned char *key, int keylen)
 		fprintf(stderr, "ERROR: key %s is not 16 digits\n", password);
 		exit(EXIT_FAILURE);
 	}
-	
 	for (i = keylen - 1; i >= passlen/2; i--) {
 		key[i] = 0;
 	}
 	for (; i >= 0; i--) {
-		/* Add the first of two digits to the current key value */
 		key[i] = hexvalue(*(password++)) << 4;
-		/* If there's a second digit at this position, add it */
-		if (*password != '\0') {
-			key[i] |= hexvalue(*(password++));
-		}
+		key[i] |= hexvalue(*(password++));
 	}
 }
 
