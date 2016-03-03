@@ -1,4 +1,139 @@
 2/29/16:
+	Disk zones
+		outside tracks are longer than inside tracks
+		two options for longer tracks
+			bits are "bigger"
+			more bits (transfer time)
+		modern drives use second option
+			more data on outer tracks
+		disk divided into zones
+			constant sectors per track in each zone
+			8-30 zones on a disk
+	Disk addressing
+		millions of sectors on disk must be labeled
+		two possibilities
+			cylinder/track/sector
+			sequential numbering
+		modern drives use sequential numbers
+			disks map sequential numbers into specific location
+			mapping may be modified by disk
+				remap bad sectors
+				optimize performance
+			hide exact geometry
+	Build better "disk"
+		CPU performance increasing exponentially,
+		but disk performance hasn't
+		disks aren't reliable
+		solution - distribute data across disks and use
+		some space to improve reliability
+			data transferred in parallel
+			data stored across drives (striping)
+			parity on "extra" drive for reliability
+	Redundant Array of Inexpensive Disks (RAID)
+		RAID 0 - striped
+		RAID 1 - mirrored copies
+		RAID 4 - striped with parity
+		RAID 5 - parity rotates through disks		
+	CD-ROM recording
+		CD-ROM has data in spiral
+		one continuous track
+		pits and lands "simulated" with heat-sensitive material
+	Structure of a disk sector
+		preamble | data | ECC
+		preamble contains information about sector
+			sector number and location information
+		data usually 256, 512, or 1024 bytes
+		ECC (Error Correcting Code) used to detect
+		and correct minor errors in the data
+	Sector layout on disk
+		sectors numbered sequentially on each track
+		numbering starts in different place on each track
+			sector skew
+			allows time for switching head from track to track
+	Sector interleaving
+		on older systems CPU slow => time elapsed between reading
+		consecutive sectors
+		solution - leave space between consecutively numbered sectors
+		not done much any more
+	What's in a disk request?
+		time required to read or write a disk block
+		determined by 3 factors
+			seek time
+			rotational delay
+				average delay = 1/2 rotation time
+			actual transfer time
+				time to rotate over a sector
+		seek time dominates, with rotation time close
+		error checking done by controllers
+	Disk request scheduling
+		use hardware efficiently
+			bandwidth as high as possible
+			disk transferring as often as possible (not seeking)
+		minimize disk seek time - moving from track to track
+		minimize rotational latency - waiting for disk to
+			rotate desired sector under read/write head
+		calculate disk bandwidth by
+			total bytes transferred / time to service request
+			seek time and rotational latency are overhead
+		minimize seek time and rotational latency by
+			using algorithms to find a good sequence for servicing requests
+			placing blocks of a file "near" each other
+	Disk scheduling algorithms
+		schedule disk requests to minimize disk seek time
+		
+	First-Come-First-Served (FCFS)
+		requests serviced in the order which they arrived
+			easy to implement
+	Shortest Seek Time First (SSTF)
+		service the request with the shortest seek time from the current
+		head position
+			form of SJF scheduling
+			may starve some requests
+	SCAN (elevator algorithm)
+		disk arm starts at one end of the disk and moves towards the
+		other end, servicing requests as it goes
+	C-SCAN
+		Identical to SCAN, except head returns to cylinder 0 when it
+		reaches the end of the disk
+	C-LOOK
+		Identical to C-SCAN, except the head only travels as far as the last
+		request in each direction
+	Picking a disk scheduling algorithm
+		SSTF is easy to implement and works OK if there aren't too many
+		disk requests in the queue
+		SCAN-type algorithms perform better for systems under heavy load
+		Long seeks aren't too expensive, so choose C-LOOK over LOOK to
+		make response time more even
+		Disk request scheduling interacts with algorithms
+	Flash memory
+		compared to disk, flash is
+			faster (shorter access time, but lower bandwidth)
+			more expensive
+			more reliable (devices)
+			less reliable (sectors)
+		compared to DRAM, flash is
+			cheaper
+			non-volatile (data survives power loss)
+			slower
+		use flash as a level between disk and memory?
+		issues
+			can't overwrite sectors "in place"
+			flash wears out: can only write so many times per memory cell
+	Writing to flash memory
+		can't overwrite page in place
+			need to write to clean region
+			unit of erase is erase block
+		copy entire erase block in new location
+			modify the page being written
+	Is there a better way to
+	Handling flash in the OS
+		treat it like a disk
+			flash written in blocks, just like a disk
+			flash is random access, just like disk
+		need to be careful about wearing out flash
+			most flash devices do "wear levelling" - remap blocks
+			internally when they're erased
+	
 	
 3/2/16:
 	
