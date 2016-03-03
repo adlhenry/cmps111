@@ -19,6 +19,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include "rijndael.h"
 
 #define KEYBITS 128
@@ -81,9 +83,10 @@ int main (int argc, char **argv)
 	unsigned long rk[RKLENGTH(KEYBITS)];	/* round key */
 	unsigned char key[KEYLENGTH(KEYBITS)];	/* cipher key */
 	char buf[100];
+	struct stat sb;
 	int i, nbytes, nwritten , ctr;
 	int totalbytes;
-	int fileId = 0x1234;		/* fake (in this example) */
+	int file_id;
 	int nrounds;				/* # of Rijndael rounds */
 	int	fd;
 	char *filename;
@@ -97,7 +100,7 @@ int main (int argc, char **argv)
 	}
 	getpassword(argv[1], key, sizeof(key));
 	filename = argv[2];
-
+	
 	/* Print the key, just in case */
 	for (i = 0; i < sizeof(key); i++) {
 		sprintf(buf+2*i, "%02x", key[sizeof(key)-i-1]);
@@ -110,18 +113,20 @@ int main (int argc, char **argv)
 	*/
 	nrounds = rijndaelSetupEncrypt(rk, key, KEYBITS);
 
-	/*
-	* Open the file.
-	*/
+	if (stat(filename, &sb) == -1) {
+		fprintf(stderr, "Error with file stat %s\n", filename);
+		exit(EXIT_FAILURE);
+	}
+	file_id = sb.st_ino;
+	
 	fd = open(filename, O_RDWR);
-	if (fd < 0)
-	{
-		fprintf(stderr, "Error opening file %s\n", argv[2]);
+	if (fd < 0) {
+		fprintf(stderr, "Error opening file %s\n", filename);
 		return 1;
 	}
 
 	/* fileID goes into bytes 8-11 of the ctrvalue */
-	bcopy(&fileId, &(ctrvalue[8]), sizeof(fileId));
+	bcopy(&file_id, &(ctrvalue[8]), sizeof(file_id));
 
 	/* This loop reads 16 bytes from the file, XORs it with the encrypted
 	 CTR value, and then writes it back to the file at the same position.
@@ -129,7 +134,7 @@ int main (int argc, char **argv)
 	 encryption and decryption.  In other words, if you run this program
 	 twice, it will first encrypt and then decrypt the file.
 	*/
-	for (ctr = 0, totalbytes = 0; /* loop forever */; ctr++) {
+	for (ctr = 0, totalbytes = 0; ; ctr++) {
 		/* Read 16 bytes (128 bits, the blocksize) from the file */
 		nbytes = read(fd, filedata, sizeof(filedata));
 		if (nbytes <= 0) {
