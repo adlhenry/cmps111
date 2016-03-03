@@ -1,0 +1,16 @@
+// Author: Adam Henry, adlhenry@ucsc.edu
+
+SYNOPSIS
+	CryptoFS - A simple file encryption system for freeBSD.
+	
+DATA
+	
+	
+FUNCTIONS
+encrypt.c
+	function()
+		purpose - 
+		inputs - 
+		outputs - 
+		assumptions - 
+		

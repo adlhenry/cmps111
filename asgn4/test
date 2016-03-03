@@ -1,0 +1,90 @@
+// Author: Adam Henry, adlhenry@ucsc.edu
+
+SYNOPSIS
+	Slim Chance Paging - A simple paging daemon for freeBSD.
+	
+	Slim Chance Algorithm
+		The slim chance algorithm works almost the same as the
+		default second chance clock algorithm used by freeBSD.
+		Except for the following differences: inactive and invalid
+		pages are moved to the rear of the free queue instead of the
+		front, the activity count for a page gets decayed to half its
+		original value and placed at the front of the active queue
+		instead of being linearly decayed and being placed at the 
+		rear of the active queue, and pages moved to the inactive
+		queue get placed at the front instead of the rear.
+	
+DATA
+vm_page.h
+	vmd_scanned_active - count of pages scanned in the active queue
+	vmd_scanned_inactive - count of pages scanned in the inactive queue
+	vmd_deactivated - count of pages moved from the active queue to
+					  the inactive queue
+	vmd_reactivated - count of pages moved from the inactive queue to 
+					  the active queue
+	vmd_cached - count of pages moved from the inactive queue to
+				 the cache queue
+	vmd_flushed - count of pages moved from the inactive queue to
+				  the free queue
+	
+vm_pageout.c
+	vm_pageout_update_period - minimum period in seconds over which to scan all
+							   pages in the active queue (set to 10 seconds)
+	
+FUNCTIONS
+vm_pageout.c
+	vm_pageout_resetstats()
+		purpose - reset the statistic variables for a single run
+				  of the page daemon
+		inputs - pointer to a struct vm_domain
+		outputs - none
+		assumptions - the pointer to the struct vm_domain is non-null
+		
+	vm_pageout_log()
+		purpose - print page daemon statistics to the system log
+		inputs - pointer to a struct vm_domain
+		outputs - text to the file /var/log/messages in the following format:
+				  [total scanned] : (active scan) (inactive scan) : 
+				  (deactivated) (reactivated) (cached/freed) (flushed)
+		assumptions - the pointer to the struct vm_domain is non-null
+		
+	vm_pageout_scan()
+		purpose - scans active and inactive queues and finds pages to
+				  move from active to inactive queues and from the inactive
+				  queue to the cache / free queues
+		inputs - a pointer to a struct vm_domain and an integer
+		outputs - sets global variables for scanned and moved pages
+		assumptions - the struct vm_domain pointer is non-null
+	
+vm_page.c
+	vm_page_free2()
+		purpose - move a page to the rear of the free queue
+		inputs - a vm_page_t
+		outputs - none
+		assumptions - the page is not busy and eligible to be freed
+		
+	vm_page_deactivate2()
+		purpose - move a page to the front of the inactive queue
+		inputs - a vm_page_t
+		outputs - none
+		assumptions - the vm_page_t object is locked
+		
+	vm_page_requeue_locked2()
+		purpose - move a page to the front of its current page queue
+		inputs - a vm_page_t
+		outputs - none
+		assumptions - the page's queue is locked
+		
+	vm_page_free_toq2()
+		purpose - move a page to the rear of the free queue
+		inputs - a vm_page_t
+		outputs - none
+		assumptions - the page must be locked if managed
+		
+vm_phys.c
+	vm_phys_free_pages2()
+		purpose - free a contiguous, power of two-sized set of physical
+				  pages
+		inputs - a vm_page_t and an integer
+		outputs - none
+		assumptions - the free page queues must be locked

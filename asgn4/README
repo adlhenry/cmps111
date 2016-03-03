@@ -1,0 +1,17 @@
+// Author: Adam Henry, adlhenry@ucsc.edu
+
+TEAM MEMBERS
+	Adam Henry
+	
+COMPILE
+	sudo make buildkernel
+	
+INSTALL
+	sudo make installkernel
+	sudo shutdown -r now
+	
+TEST
+	
+	
+CONTRIBUTION
+	
