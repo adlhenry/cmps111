@@ -10,7 +10,7 @@
 			constant sectors per track in each zone
 			8-30 zones on a disk
 	Disk addressing
-		millions of sectors on disk must be labeled
+		millions of sectors on disk must be labelled
 		two possibilities
 			cylinder/track/sector
 			sequential numbering
@@ -80,7 +80,8 @@
 			placing blocks of a file "near" each other
 	Disk scheduling algorithms
 		schedule disk requests to minimize disk seek time
-		
+			seek time increases as distance increases (not linearly)
+			minimize seek distance => minimize seek time
 	First-Come-First-Served (FCFS)
 		requests serviced in the order which they arrived
 			easy to implement
@@ -134,8 +135,177 @@
 			most flash devices do "wear levelling" - remap blocks
 			internally when they're erased
 	
-	
 3/2/16:
+	Clock hardware
+		crystal oscillator with fixed frequency (only when computer on)
+			typically used to time short intervals (~1 second)
+			may be used to correct time-of-day clock
+		time-of-day clock (runs when system off)
+			keeps minutes, hours, days
+			not to accurate
+			used to load system clock at start-up
+		time kept in seconds and ticks (often 100-1000 per second)
+			number of seconds since particular time (UNIX: January 1, 1970)
+			number of ticks this second
+			advance ticks once per clock interrupt
+			advance seconds when ticks "overflow"
+	Keeping time
+		check time via the web
+			protocol to get time from accurate time servers
+		when system clock slow
+			advance to correct time
+			may be done all at once or over a minute or two
+		when system clock fast
+			can't have backwards time
+			advance time more slowly than normal until clock correct
+		track clock drift, do periodic updates to keep accuracy
+	Using timers in software
+		use short interval clock for timer interrupts
+			specified by applications
+			no problems if interrupt frequency is low
+			may have multiple timers using single clock chip
+		use soft timers to avoid interrupts
+			kernel check for soft timer expiration before it
+			exits to user mode
+			less accurate than hardware timer
+			how well this work depends on rate of kernel entries
+	Where does the power go?
+		most power to laptop display
+		save power by
+			reduce display power
+			slow down CPU
+			reduce disk power
+	Reducing CPU power usage
+		running at full clock speed
+			jobs finish quickly
+			high energy consumption
+		cut voltage by half
+			50% clock speed halved
+			25% power consumption
+			50% energy consumption (power * time)
+	Long-term information storage
+		store large amounts of data
+			gigabytes < terabytes < petabytes
+		stored information must survive termination of process
+		using it
+		multiple processes must access the information concurrently
+	Naming files
+		every file has at least one name
+		name is human-accessible or machine-usable (e.g, "foo.text", or 192837)
+		case may or may not matter
+		name may include information about files' content
+			computer may use part of name to determine file type
+	Internal file structure
+		executable file
+			header
+				magic number
+				text size
+				data size
+				BSS size
+				symbol table size
+				entry point
+				flags
+			text
+			data
+			relocation bits
+			symbol table
+		archive file
+			header
+				module name
+				date
+				owner
+				protection
+				size
+			object module
+			header
+			object module
+	Accessing a file
+		sequential access
+			read all bytes/records from the beginning
+			cannot jump around (may rewind)
+			convenient when medium was magnetic tape
+			often useful when whole file is needed
+		random access
+			bytes (or records) read in any order
+			essential for database systems
+			read can be
+				move file marker (seek), then read
+				read and then move file marker
+	File attributes
+		protection, password, creator, owner, read-only flag, hidden flag,
+		system flag, archived flag, ASCII/binary flag, random access flag,
+		temporary flag, lock flags, record length, key position/length,
+		creation time, last access time, last modified time, current size,
+		maximum size
+	File operations
+		create - make new file
+		delete - remove existing file
+		open - prepare file to be accessed
+		close - indicate that a file no longer being accessed
+		read - get data from file
+		write - put data to a file
+		append - like write, but only at the end of a file
+		seek - move the current pointer elsewhere in the file
+		get attributes - retrieve attribute information
+		set attributes - modify attribute information
+		rename - change a file's name
+	Memory-mapped files
+		segmented process before mapping files into its address space
+		process after mapping
+			existing file foo into one segmented
+			create new segment for bar
+		memory mapped files are a convenient abstraction
+			e.g., string search in large file can be done just as with memory
+			let OS do the buffering in virtual memory system
+		some issues
+			how long is file
+				easy for read-only
+				difficult for write-enabled
+			what if file is shared
+			when are writes flushed to disk
+		easier to memory map read-only files
+	Directories
+		name is limited
+		humans organize thing in groups
+		groups allow
+			find files easier
+			locate related files
+	Single-level directory systems
+		one directory in the file system
+		problem: file naming conflicts (especially across users)
+	Two-level directory system
+		solves naming problem - each user had their own directory
+		extension: allow users to access files in other's directories
+	Hierarchical directory system
+		Allow multiple levels of files under directories with different user
+		access levels
 	
 3/4/16:
-	
+	Operations on directories
+		create - make a new directory
+		delete - remove a directory (usually must be empty)
+		opendir - open a directory to allow searching it
+		closedir - close a directory (done searching)
+		readdir - read a directory entry
+		rename - change the name of a directory
+		link - create a new entry in a directory to link and existing file
+		unlink - remove an entry in a directory
+			remove the file if this is the last link to this file
+	File system implementation issues
+		how are disks divided into file systems
+		how does file system allocate blocks to files
+		how does file system manage free space
+		how are directories handled
+		how to improve performance and reliability
+	Carving up the disk
+		disk
+			master boot record | partition table | partitions ...
+		partition
+			boot block | super block | free space management| index nodes | files & directories
+	Contiguous allocation for file blocks
+		requires all blocks of a file to be consecutive on disk
+		problem - deleting files leaves "holes"
+			similar to memory allocation issues
+			compacting disk may be very slow procedure
+	Contiguous allocation
+		22
