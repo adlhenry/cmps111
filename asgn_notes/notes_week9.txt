@@ -308,4 +308,122 @@
 			similar to memory allocation issues
 			compacting disk may be very slow procedure
 	Contiguous allocation
-		22
+		data in each file is stored in consecutive blocks on disk
+		simple and efficient indexing
+			starting location (block #) on disk
+			length of the file in blocks
+		random access well-supported
+		difficult to grow files
+			must pre-allocate all needed space
+			wasteful of storage if file isn't using all space
+		logical to physical mapping is easy
+			blocknum = (pos/1024) + start;
+			offset_in_block = pos % 1024;
+	Linked allocation
+		file is a linked list of disk blocks
+			blocks may be scattered around disk drive
+			block contains both pointer to next block and data
+			files may be as long as needed
+		new blocks are allocated as needed
+			linked into list of blocks in file
+			removed from list (bitmap) of free blocks
+	Finding blocks with linked allocation
+		directory structure is simple
+			starting address looked up from directory
+			directory only keeps track of first block
+		no wasted space - all blocks can be used
+		random access is difficult - must always start at first block
+		logical to physical mapping
+			block = start;
+			offset_in_block = pos % 1020;
+			for (j = 0; j < pos / 1020; j++) {
+				block = block->next;
+			}
+	Linked allocation using a table in RAM
+		links on disk are slow
+		keep linked list in memory
+		advantage - faster
+		disadvantages
+			have to copy it to disk at some point
+			have to keep in-memory and on-disk copy consistent
+	Using a block index for allocation
+		store file block address in array
+			array stored in disk block
+			directory has pointer to this block
+			non-existent blocks indicated by -1
+		random access easy
+		limit on file size?
+	Finding blocks with indexed allocation
+		need location of index table - lookup in directory
+		random and sequential access both well-supported
+			- lookup block number in index table
+		space utilization is good
+			no wasted blocks
+			files can grow and shrink easily
+			overhead of single block per file
+		logical to physical mapping
+			block = index[pos / 1024];
+			offset_in_block = pos % 1024;
+		limited file size - 256 pointers per index block,
+		1KB per file block => 256 KB per file limit
+	Larger files with indexed allocation
+		linked index blocks
+		logical to physical mapping
+			index = start;
+			blocknum = pos / 1024;
+			for (j= 0; j < blocknum / 255; j++) {
+				index = index->next;
+			}
+			block = index[blocknum % 255];
+			offset_in_block = pos % 1024;
+		file size now unlimited
+		random access slow, but only for very large files
+	Two-level indexed allocation
+		allow larger files by creating an index of index blocks
+			file size still limited, but much larger
+			limit for 1 KB blocks = 1 KB x 256 x 256 = 2^26 bytes = 64 MB
+		logical to physical mapping
+			blocknum = pos / 1024;
+			index = start[blocknum / 256];
+			block = index[blocknum % 256];
+			offset_in_block = pos % 1024;
+			start is only pointer kept in directory
+			overhead is now at least two blocks per file
+	Block allocation with extents
+		reduce space consumed by index pointers
+			often consecutive blocks in file are sequential on disk
+			store <block,count> instead of <block> in index
+			at each level, keep total count for the index
+		lookup procedure
+			- find correct index block by checking the starting file offset
+			for each index block
+			- find correct <block,count> entry by running through index
+			block, keeping track of how far into file entry is
+			- find correct block in <block,count> pair
+		more efficient if file blocks tend to be consecutive on disk
+	Managing free space - bit vector
+		keep a bit vector, with one entry per file block
+			number bits from 0 through n-1, where n is the number
+			of blocks available for files on the disk
+			if bit[j] == 0, block j is free
+			if bit[j] == 1, block j is in use (data or index)
+		if words are 32 bits, calculate appropriate bit by
+			wordnum = block / 32;
+			bitnum = block % 32;
+		search for free blocks by looking for words with bits unset
+		(words != 0xffffff)
+		easy to find consecutive blocks for a single file
+		bit map must be stored on disk, and consumes space
+			assume 4 KB blocks, 256 GB disk => 64 M blocks
+			64 M bits = 2^26 bits = 2^23 bytes = 8 MB overhead
+	Managing free space - linked list
+		use a linked list to manage free blocks
+			no wasted space for bitmap
+			no need for random access unless we want to find
+			consecutive blocks for a single file
+		- difficult to know how many blocks are free unless its
+		tracked elsewhere in file system
+		- difficult to group nearby blocks together if they're
+		freed at different times
+			less efficient allocation of blocks
+			files read and write more because consecutive blocks not nearby
