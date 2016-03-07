@@ -153,18 +153,18 @@ int main (int argc, char **argv)
 	* call from the values passed in key and KEYBITS.
 	*/
 	nrounds = rijndaelSetupEncrypt(rk, key, KEYBITS);
-
-	if (stat(filename, &sb) == -1) {
-		fprintf(stderr, "Error with file stat %s\n", filename);
-		exit(EXIT_FAILURE);
-	}
-	file_id = sb.st_ino;
 	
 	fd = open(filename, O_RDWR);
 	if (fd < 0) {
 		fprintf(stderr, "Error opening file %s\n", filename);
 		return 1;
 	}
+	
+	if (stat(filename, &sb) == -1) {
+		fprintf(stderr, "Error with file stat %s\n", filename);
+		exit(EXIT_FAILURE);
+	}
+	file_id = sb.st_ino;
 
 	/* fileID goes into bytes 8-11 of the ctrvalue */
 	bcopy(&file_id, &(ctrvalue[8]), sizeof(file_id));
