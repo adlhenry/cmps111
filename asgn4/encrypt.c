@@ -41,6 +41,34 @@ void usage ()
 	exit(EXIT_FAILURE);
 }
 
+// Parse program options
+void parse_options (int argc, char **argv)
+{
+	int opt;
+	static struct option longopts[] = {
+	{"encrypt",	no_argument,	NULL,	'e'},
+	{"decrypt",	no_argument,	NULL,	'd'},
+	{NULL,				0,		NULL,	0}
+	};
+
+	if (argc != 4) {
+		usage();
+	}
+	eflag = dflag = 0;
+	while ((opt	= getopt_long(argc, argv, "ed", longopts, NULL)) != -1) {
+		switch (opt) {
+			case 'e':
+				eflag = 1;
+				break;
+			case 'd':
+				dflag = 1;
+				break;
+			default:
+				usage();
+		}
+	}
+}
+
 /***********************************************************************
  *
  * hexvalue
@@ -93,60 +121,19 @@ getpassword (const char *password, unsigned char *key, int keylen)
 	}
 }
 
-// Parse program options
-void parse_options (int argc, char **argv)
-{
-	int opt;
-	static struct option longopts[] = {
-	{"encrypt",	no_argument,	NULL,	'e'},
-	{"decrypt",	no_argument,	NULL,	'd'},
-	{NULL,				0,		NULL,	0}
-	};
-
-	if (argc != 4) {
-		usage();
-	}
-	eflag = dflag = 0;
-	while ((opt	= getopt_long(argc, argv, "ed", longopts, NULL)) != -1) {
-		switch (opt) {
-			case 'e':
-				eflag = 1;
-				break;
-			case 'd':
-				dflag = 1;
-				break;
-			default:
-				usage();
-		}
-	}
-}
-
-int main (int argc, char **argv)
+// Encrypt or decrypt a file using 128-bit AES encryption
+void aes_encrypt (unsigned char *key, char *filename)
 {
 	unsigned long rk[RKLENGTH(KEYBITS)];	/* round key */
-	unsigned char key[KEYLENGTH(KEYBITS)];	/* cipher key */
-	char buf[100];
 	struct stat sb;
 	int i, nbytes, nwritten, ctr;
 	int totalbytes;
 	int file_id;
 	int nrounds;				/* # of Rijndael rounds */
 	int	fd;
-	char *filename;
 	unsigned char filedata[16];
 	unsigned char ciphertext[16];
 	unsigned char ctrvalue[16];
-	
-	execname = basename(argv[0]);
-	parse_options(argc, argv);
-	getpassword(argv[2], key, sizeof(key));
-	filename = argv[3];
-	
-	/* Print the key, just in case */
-	for (i = 0; i < sizeof(key); i++) {
-		sprintf(buf+2*i, "%02x", key[sizeof(key)-i-1]);
-	}
-	fprintf(stderr, "KEY: %s\n", buf);
 
 	/*
 	* Initialize the Rijndael algorithm.  The round key is initialized by this
@@ -157,7 +144,7 @@ int main (int argc, char **argv)
 	fd = open(filename, O_RDWR);
 	if (fd < 0) {
 		fprintf(stderr, "Error opening file %s\n", filename);
-		return 1;
+		exit(EXIT_FAILURE);
 	}
 	
 	if (stat(filename, &sb) == -1) {
@@ -202,7 +189,7 @@ int main (int argc, char **argv)
 		if (nwritten != nbytes) {
 			fprintf(stderr,
 				"%s: error writing the file (expected %d, got %d at ctr %d\n)",
-				argv[0], nbytes, nwritten, ctr);
+				execname, nbytes, nwritten, ctr);
 			break;
 		}
 
@@ -210,4 +197,24 @@ int main (int argc, char **argv)
 		totalbytes += nbytes;
 	}
 	close(fd);
+}
+
+int main (int argc, char **argv)
+{
+	unsigned char key[KEYLENGTH(KEYBITS)];	/* cipher key */
+	char *filename;
+	
+	execname = basename(argv[0]);
+	parse_options(argc, argv);
+	getpassword(argv[2], key, sizeof(key));
+	filename = argv[3];
+	
+	char buf[100];
+	/* Print the key, just in case */
+	for (int i = 0; i < sizeof(key); i++) {
+		sprintf(buf+2*i, "%02x", key[sizeof(key)-i-1]);
+	}
+	fprintf(stderr, "KEY: %s\n", buf);
+	
+	aes_encrypt(key, filename);
 }
