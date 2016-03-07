@@ -130,7 +130,7 @@ void aes_encrypt (unsigned char *key, char *filename)
 	int totalbytes;
 	int file_id;
 	int nrounds;				/* # of Rijndael rounds */
-	int	fd;
+	int fd;
 	unsigned char filedata[16];
 	unsigned char ciphertext[16];
 	unsigned char ctrvalue[16];
