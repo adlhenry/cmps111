@@ -25,6 +25,18 @@
 
 #define KEYBITS 128
 
+// Program name
+char *execname;
+
+// Encrypt and decrypt global flags
+int eflag, dflag;
+
+// Print a program usage message to stderr
+void usage () {
+	fprintf(stderr, "Usage: %s <key> <file>\n", execname);
+	exit(EXIT_FAILURE);
+}
+
 /***********************************************************************
  *
  * hexvalue
@@ -48,7 +60,6 @@ int hexvalue (char c)
 		exit(-1);
 	}
 }
-
 
 /***********************************************************************
  *
@@ -78,6 +89,34 @@ getpassword (const char *password, unsigned char *key, int keylen)
 	}
 }
 
+// Parse program options
+void parse_options (int argc, char **argv) {
+	int opt;
+
+	static struct option longopts[] = {
+	{"encrypt",	no_argument,	NULL,	'e'},
+	{"decrypt",	no_argument,	NULL,	'd'},
+	{NULL,				0,		NULL,	0}
+	};
+
+	if (argc != 3) {
+		usage();
+	}
+	eflag = dflag = 0;
+	while ((opt	= getopt_long(argc, argv, "ed", longopts, NULL)) != -1) {
+		switch (opt) {
+			case 'e':
+				eflag = 1;
+				break;
+			case 'd':
+				dflag = 1;
+				break;
+			default:
+				usage();
+		}
+	}
+}
+
 int main (int argc, char **argv)
 {
 	unsigned long rk[RKLENGTH(KEYBITS)];	/* round key */
@@ -93,11 +132,9 @@ int main (int argc, char **argv)
 	unsigned char filedata[16];
 	unsigned char ciphertext[16];
 	unsigned char ctrvalue[16];
-
-	if (argc != 3) {
-		fprintf(stderr, "Usage: %s <key> <file>\n", argv[0]);
-		return 1;
-	}
+	
+	execname = argv[0];
+	parse_options(argc, argv);
 	getpassword(argv[1], key, sizeof(key));
 	filename = argv[2];
 	
