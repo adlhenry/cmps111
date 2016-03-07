@@ -127,7 +127,7 @@ int main (int argc, char **argv)
 	unsigned char key[KEYLENGTH(KEYBITS)];	/* cipher key */
 	char buf[100];
 	struct stat sb;
-	int i, nbytes, nwritten , ctr;
+	int i, nbytes, nwritten, ctr;
 	int totalbytes;
 	int file_id;
 	int nrounds;				/* # of Rijndael rounds */
