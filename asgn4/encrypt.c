@@ -14,11 +14,13 @@
  */
 
 #include <stdio.h>
-#include <fcntl.h>
-#include <strings.h>
-#include <string.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <libgen.h>
+#include <fcntl.h>
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
+#include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "rijndael.h"
@@ -32,8 +34,10 @@ char *execname;
 int eflag, dflag;
 
 // Print a program usage message to stderr
-void usage () {
-	fprintf(stderr, "Usage: %s <key> <file>\n", execname);
+void usage ()
+{
+	fprintf(stderr,
+	"Usage: %s [-e(--encrypt) | -d(--decrypt)] <key> <file>\n", execname);
 	exit(EXIT_FAILURE);
 }
 
@@ -90,16 +94,16 @@ getpassword (const char *password, unsigned char *key, int keylen)
 }
 
 // Parse program options
-void parse_options (int argc, char **argv) {
+void parse_options (int argc, char **argv)
+{
 	int opt;
-
 	static struct option longopts[] = {
 	{"encrypt",	no_argument,	NULL,	'e'},
 	{"decrypt",	no_argument,	NULL,	'd'},
 	{NULL,				0,		NULL,	0}
 	};
 
-	if (argc != 3) {
+	if (argc != 4) {
 		usage();
 	}
 	eflag = dflag = 0;
@@ -133,10 +137,10 @@ int main (int argc, char **argv)
 	unsigned char ciphertext[16];
 	unsigned char ctrvalue[16];
 	
-	execname = argv[0];
+	execname = basename(argv[0]);
 	parse_options(argc, argv);
-	getpassword(argv[1], key, sizeof(key));
-	filename = argv[2];
+	getpassword(argv[2], key, sizeof(key));
+	filename = argv[3];
 	
 	/* Print the key, just in case */
 	for (i = 0; i < sizeof(key); i++) {
