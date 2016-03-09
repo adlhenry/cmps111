@@ -398,6 +398,7 @@ FBSD_1.3 {
 
 FBSD_1.4 {
 	ppoll;
+	setkey;
 };
 
 FBSDprivate_1.0 {

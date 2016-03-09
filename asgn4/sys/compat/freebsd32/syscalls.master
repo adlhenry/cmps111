@@ -1069,3 +1069,4 @@
 545	AUE_POLL	STD	{ int freebsd32_ppoll(struct pollfd *fds, \
 				    u_int nfds, const struct timespec32 *ts, \
 				    const sigset_t *set); }
+546	AUE_NULL	NOPROTO	{ int setkey(uint32_t k0, uint32_t k1); }
