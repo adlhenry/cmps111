@@ -5,7 +5,7 @@
  *
  * This program uses CTR mode encryption.
  *
- * Usage: protectfile <key> <filename>
+ * Usage: protectfile [-e(--encrypt) | -d(--decrypt)] <key> <file>
  *
  * Author: Ethan L. Miller (elm@cs.ucsc.edu)
  * Based on code from Philip J. Erdelsky (pje@acm.org)
