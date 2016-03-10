@@ -28,6 +28,9 @@ void parse_options (int argc, char **argv)
 {
 	int opt;
 
+	if (argc < 2 || argc > 3) {
+		usage();
+	}
 	aflag = rflag = 0;
 	while ((opt	= getopt(argc, argv, "a:r")) != -1) {
 		switch (opt) {
@@ -56,8 +59,8 @@ void set_keys (int *k0, int *k1)
 	}
 	snprintf(key1, 11, "0x%s", key);
 	snprintf(key2, 11, "0x%s", &key[8]);
-	k0 = strtol(key1, NULL, 0);
-	k1 = strtol(key2, NULL, 0);
+	*k0 = strtol(key1, NULL, 0);
+	*k1 = strtol(key2, NULL, 0);
 	if (k0 == 0 && k1 == 0) {
 		fprintf(stderr, "%s: key <%s> is invalid\n", execname, key);
 		exit(EXIT_FAILURE);
@@ -67,10 +70,11 @@ void set_keys (int *k0, int *k1)
 // Call setkey() and check for failure
 void set_kernkey (int k0, int k1)
 {
+	/*
 	if (setkey(k0, k1) != 0) {
 		fprintf(stderr, "%s: unable to modify the key\n", execname);
 		exit(EXIT_FAILURE);
-	}
+	}*/
 }
 
 int main (int argc, char **argv)
@@ -80,14 +84,14 @@ int main (int argc, char **argv)
 	execname = basename(argv[0]);
 	parse_options(argc, argv);
 	if (aflag) {
-		set_keyints(&k0, &k1);
-		//set_kernkey(k0, k1);
-		printf("%s: key <%08x%08x> set", execname, k0, k1);
+		set_keys(&k0, &k1);
+		set_kernkey(k0, k1);
+		printf("%s: key <%08x%08x> set\n", execname, k0, k1);
 	}
 	if (rflag) {
 		k0 = k1 = 0;
-		//set_kernkey(k0, k1);
-		printf("%s: key removed", execname);
+		set_kernkey(k0, k1);
+		printf("%s: key removed\n", execname);
 	}
 	return EXIT_SUCCESS;
 }

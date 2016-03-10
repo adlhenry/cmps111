@@ -28,6 +28,6 @@ clean :
 
 test: all
 	cp ${TEST} ${TEST}.orig
-	./${EXECBIN} -e 0123456789abcdef ${TEST}
-	./${EXECBIN} -d 0123456789abcdef ${TEST}
+	./${PEXECBIN} -e 0123456789abcdef ${TEST}
+	./${PEXECBIN} -d 0123456789abcdef ${TEST}
 	diff ${TEST} ${TEST}.orig

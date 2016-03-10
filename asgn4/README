@@ -5,13 +5,14 @@ TEAM MEMBERS
 	
 COMPILE
 	sudo make buildkernel
+	make
 	
 INSTALL
 	sudo make installkernel
 	sudo shutdown -r now
 	
 TEST
-	
+	make test
 	
 CONTRIBUTION
 	
