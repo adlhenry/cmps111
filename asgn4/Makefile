@@ -1,16 +1,22 @@
 # Author: Adam Henry, adlhenry@ucsc.edu
 
-CC        = cc -g -O0 -Wall -Wextra -std=c11
-SOURCE    = encrypt.c rijndael.c
-HEADER    = rijndael.h
-TEST      = test
-OBJECTS   = ${SOURCE:.c=.o}
-EXECBIN   = protectfile
+CC			= cc -g -O0 -Wall -Wextra -std=c11
+PSOURCE		= encrypt.c rijndael.c
+SSOURCE   	= setkey.c
+TEST		= test
+POBJECTS	= ${PSOURCE:.c=.o}
+SOBJECTS	= ${SSOURCE:.c=.o}
+PEXECBIN	= protectfile
+SEXECBIN	= setkey
+EXECBINS	= ${PEXECBIN} ${SEXECBIN}
 
-all : ${EXECBIN}
+all : ${EXECBINS}
 
-${EXECBIN} : ${OBJECTS}
-	${CC} -o $@ ${OBJECTS}
+${PEXECBIN} : ${POBJECTS}
+	${CC} -o $@ ${POBJECTS}
+
+${SEXECBIN} : ${SOBJECTS}
+	${CC} -o $@ ${SOBJECTS}
 
 %.o : %.c
 	${CC} -c $<
@@ -18,7 +24,7 @@ ${EXECBIN} : ${OBJECTS}
 rijndael.o: rijndael.h
 
 clean :
-	- rm ${OBJECTS}
+	- rm ${POBJECTS} ${SOBJECTS}
 
 test: all
 	cp ${TEST} ${TEST}.orig
