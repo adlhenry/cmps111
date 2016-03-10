@@ -217,4 +217,5 @@ int main (int argc, char **argv)
 	fprintf(stderr, "KEY: %s\n", buf);
 	
 	aes_encrypt(key, filename);
+	return EXIT_SUCCESS;
 }
