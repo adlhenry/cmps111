@@ -29,18 +29,23 @@
 #ifndef _SYS_SETKEY_H_
 #define	_SYS_SETKEY_H_
 
-#ifdef _KERNEL
+#define KS_MAXKEYS 		16	/* Number of keys storable. */
+#define KS_INVALIDKEY 	1	/* A zero key was given to setkey(). */
+#define KS_KEYEXISTS 	2	/* A key is already set for the user. */
+#define KS_KEYLISTFULL 	3	/* The keylist has reached its capacity. */
 
+#ifdef _KERNEL
 struct keyset {
-	uid_t		ks_uid;
-	uint32_t	ks_k0;
-	uint32_t	ks_k1;
-	char	*ks_hexkey;
+	uid_t	ks_uid;		/* User id of the key owner. */
+	u_int	ks_k0;		/* First half of the user key. */
+	u_int	ks_k1;		/* Second half of the user key. */
+	char	*ks_hexkey; /* The 16-digit hex string version of the key. */
 };
 
+char *sk_getkey(uid_t uid);
 #else
 __BEGIN_DECLS
-int	setkey(uint32_t, uint32_t);
+int	setkey(u_int, u_int);
 __END_DECLS
 #endif
 #endif /* !_SYS_SETKEY_H_ */

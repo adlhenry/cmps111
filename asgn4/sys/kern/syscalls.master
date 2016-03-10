@@ -983,6 +983,6 @@
 545	AUE_POLL	STD	{ int ppoll(struct pollfd *fds, u_int nfds, \
 				    const struct timespec *ts, \
 				    const sigset_t *set); }
-546	AUE_NULL	STD	{ int setkey(uint32_t k0, uint32_t k1); }
+546	AUE_NULL	STD	{ int setkey(u_int k0, u_int k1); }
 ; Please copy any additions and changes to the following compatability tables:
 ; sys/compat/freebsd32/syscalls.master
