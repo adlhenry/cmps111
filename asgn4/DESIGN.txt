@@ -4,13 +4,102 @@ SYNOPSIS
 	CryptoFS - A simple file encryption system for freeBSD.
 	
 DATA
+encrypt.c
+	execname - program name string
+	eflag - either 0 or 1, 1 if -e(--encrypt) was specified
+	dflag - either 0 or 1, 1 if -d(--decrypt) was specified
+	
+setkey.c
+	execname - program name string
+	aflag - either 0 or 1, 1 if -a(add key) was specified
+	rflag - either 0 or 1, 1 if -r(remove key) was specified
+	key - 16-digit hex key string
+
+setkey.h
+	
+	
+kern_setkey.c
 	
 	
 FUNCTIONS
 encrypt.c
-	function()
+	usage()
+		purpose - print a usage message to stderr
+		inputs - none
+		outputs - none
+		assumptions - called when a usage error happens
+	
+	parse_options()
+		purpose - parse the user options and check for errors
+		inputs - int and a char pointer array
+		outputs - none
+		assumptions - the int contains the number of arguments in the
+					char pointer array, the char pointer array is non-null
+	
+	hexvalue()
+		purpose - returns a character's hexidecimal equivalent
+		inputs - a char
+		outputs - an int
+		assumptions - the char is hex value, if it is not the program
+					  exits
+	
+	getpassword()
+		purpose - populate the lower-order bits of a 128-bit key from
+				  a 64-bit hex string
+		inputs - two char pointers and an int
+		outputs - none
+		assumptions - both char pointers are non-null and the int is the
+					  length of the second char pointer's array
+	
+	aes_encrypt()
+		purpose - encrypt or decrypt a file using 128-bit AES encryption
+		inputs - two char pointers
+		outputs - none
+		assumptions - the char pointers are non-null
+	
+	main()
+		purpose - check if a file is to be encrypted or decrypted
+				  and perform the transformation if the sticky bit is
+				  properly set
+		inputs - an int and a char pointer array
+		outputs - none
+		assumptions - the int contains the length of the char pointer
+					  array and the char pointer array is non-null
+	
+setkey.c
+	usage()
+		purpose - print a usage message to stderr
+		inputs - none
+		outputs - none
+		assumptions - called when a usage error happens
+	
+	parse_options()
+		purpose - parse the user options and check for errors
+		inputs - int and a char pointer array
+		outputs - none
+		assumptions - the int contains the number of arguments in the
+					char pointer array, the char pointer array is non-null
+	
+	set_keys()
 		purpose - 
 		inputs - 
-		outputs - 
+		outputs - none
 		assumptions - 
-		
+	
+	set_kernkey()
+		purpose - 
+		inputs - 
+		outputs - none
+		assumptions - 
+	
+	main()
+		purpose - check if a key is to be added or removed and
+				  call setkey() in an attempt to perform the user
+				  request
+		inputs - an int and a char pointer array
+		outputs - none
+		assumptions - the int contains the length of the char pointer
+					  array and the char pointer array is non-null
+	
+kern_setkey.c
+	

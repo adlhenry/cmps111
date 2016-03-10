@@ -89,7 +89,7 @@ int hexvalue (char c)
 		return (10 + c - 'A');
 	} else {
 		fprintf(stderr, "ERROR: key digit %c isn't a hex digit!\n", c);
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 }
 
