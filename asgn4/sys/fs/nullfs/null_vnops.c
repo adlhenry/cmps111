@@ -192,6 +192,19 @@ static int null_bug_bypass = 0;   /* for debugging: enables bypass printf'ing */
 SYSCTL_INT(_debug, OID_AUTO, nullfs_bug_bypass, CTLFLAG_RW, 
 	&null_bug_bypass, 0, "");
 
+void
+null_encrypt(char *vdesc_name, struct vop_generic_args *ap)
+{
+	if (strcmp("vnop_read", vdesc_name) != 0
+	&& strcmp("vnop_read", vdesc_name) != 0) {
+		return;
+	}
+	ap->a_vp;
+	ap->a_uio
+	ap->a_ioflag;
+	ap->a_cred;
+}
+
 /*
  * This is the 10-Apr-92 bypass routine.
  *    This version has been optimized for speed, throwing away some
@@ -277,6 +290,7 @@ null_bypass(struct vop_generic_args *ap)
 	 * with the modified argument structure.
 	 */
 	if (vps_p[0] && *vps_p[0])
+		null_encrypt(descp->vdesc_name, ap);
 		error = VCALL(ap);
 	else {
 		printf("null_bypass: no map for %s\n", descp->vdesc_name);
