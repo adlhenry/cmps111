@@ -30,9 +30,8 @@
 #define	_SYS_SETKEY_H_
 
 #define KS_MAXKEYS 		16	/* Number of keys storable. */
-#define KS_INVALIDKEY 	1	/* A zero key was given to setkey(). */
-#define KS_KEYEXISTS 	2	/* A key is already set for the user. */
-#define KS_KEYLISTFULL 	3	/* The keylist has reached its capacity. */
+#define KS_INVALIDKEY 	1	/* Attempt to remove a non-existent key. */
+#define KS_KEYLISTFULL 	2	/* The keylist has reached its capacity. */
 
 #ifdef _KERNEL
 struct keyset {

@@ -61,6 +61,7 @@ sk_getkey(uid_t uid)
 static inline char *
 sk_hexkey(u_int k0, u_int k1)
 {
+	if (k0 == 0 && k1 == 0) return NULL;
 	size_t buflen = 17;
 	char hexkey[buflen];
 	snprintf(hexkey, buflen, "%08x%08x", k0, k1);
@@ -71,16 +72,35 @@ static inline int
 sk_insertkey(uid_t uid, u_int k0, u_int k1)
 {
 	struct keyset *key;
-	int error;
+	int error, i, nullkey;
 	
 	error = 0;
-	key = malloc(sizeof(struct keyset *), M_KEYSET, M_WAITOK);
+	nullkey = -1;
+	
+	key = NULL;
+	for (i = 0; i < keylist_index; i++) {
+		if (!keylist[i]->ks_hexkey) nullkey = i;
+		if (keylist[i]->ks_uid == uid) {
+			key = keylist[i];
+			break;
+		}
+	}
+	
+	if (!key) {
+		key = malloc(sizeof(struct keyset *), M_KEYSET, M_WAITOK);
+	}
 	key->ks_uid = uid;
 	key->ks_k0 = k0;
 	key->ks_k1 = k1;
 	key->hexkey = sk_hexkey(k0, k1);
 	
-	if (keylist_index < KS_MAXKEYS) {
+	if (i < keylist_index) {
+		return (error);
+	}
+	if (nullkey != -1) {
+		free(keylist[nullkey]);
+		keylist[nullkey] = key;
+	} else if (keylist_index < KS_MAXKEYS) {
 		keylist[keylist_index++] = key;
 	} else {
 		error = -1;
@@ -105,11 +125,10 @@ sys_setkey(struct thread *td, struct setkey_args *uap)
 	uid = td->td_proc->p_ucred->cr_uid;
 	k0 = uap->k0;
 	k1 = uap->k1;
-	if (sk_getkey(uid)) {
-		return KS_KEYEXISTS;
-	}
-	if (k0 == 0 && k1 == 0) {
-		return KS_INVALIDKEY;
+	if (!sk_getkey(uid)) {
+		if (k0 == 0 && k1 == 0) {
+			return KS_INVALIDKEY;
+		}
 	}
 	if (sk_insertkey(uid, k0, k1) == -1) {
 		return KS_KEYLISTFULL;

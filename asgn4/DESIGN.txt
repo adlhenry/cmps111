@@ -3,6 +3,39 @@
 SYNOPSIS
 	CryptoFS - A simple file encryption system for freeBSD.
 	
+	protectfile [-e(--encrypt) | -d(--decrypt)] <key> <file>
+	
+		-e, --encrypt - encrypts <file> with the provided <key>
+		-d, --decrypt - decrypts <file> with the provided <key>
+		<key> - a 16-digit hex number, without the 0x prefix
+		<file> - filename of the file to be encrypted or decrypted
+		
+		protectfile will either encrypt or decrypt a file depending on
+		the option specified. The program uses 128-bit AES encryption and
+		uses a file's sticky bit to indicate encryption.
+	
+	setkey [-a <key> | -r]
+		
+		-a - adds <key> for a user using the setkey() system call
+		-r - removes an existing key for a user
+		<key> - a 16-digit hex number, without the 0x prefix
+		
+		setkey will either add, replace, or remove a key from the key
+		table for a specific user. All key modification requests are
+		handled by the setkey() system call.
+	
+	setkey() - key modification system call
+		
+		setkey() takes in two unsigned integers and uses them to set a
+		user's key in the kernel key table. If the key modification
+		request cannot be fulfilled a non-zero error code is returned.
+		
+		Error codes
+		
+		KS_INVALIDKEY - the key provided is invalid
+		
+		KS_KEYLISTFULL - the key table is full
+						 (default: more than 16 entries)
 	
 DATA
 encrypt.c
@@ -15,12 +48,21 @@ setkey.c
 	aflag - either 0 or 1, 1 if -a(add key) was specified
 	rflag - either 0 or 1, 1 if -r(remove key) was specified
 	key - 16-digit hex key string
-
-setkey.h
 	
+setkey.h
+	KS_MAXKEYS - the number of keys storable in the key table (default 16)
+	KS_INVALIDKEY - attempt to remove a non-existent key
+	KS_KEYLISTFULL - the key table has reached its capacity
+	keyset - a struct to contain key information for a user,
+		ks_uid - user id of the key owner
+		ks_k0 - first half of the user key
+		ks_k1 - second half of the user key
+		ks_hexkey = 16-digit hex string version of the user key
 	
 kern_setkey.c
-	
+	keylist	- an array of KS_MAXKEYS number of keyset pointers
+	keylist_index - the current number of null and non-null keys
+					in the keylist
 	
 FUNCTIONS
 encrypt.c
@@ -104,7 +146,29 @@ setkey.c
 					  array and the char pointer array is non-null
 	
 kern_setkey.c
+	sk_getkey()
+		purpose - 
+		inputs - 
+		outputs - 
+		assumptions - 
 	
+	sk_hexkey()
+		purpose - 
+		inputs - 
+		outputs - 
+		assumptions - 
+	
+	sk_insertkey()
+		purpose - 
+		inputs - 
+		outputs - 
+		assumptions - 
+	
+	sys_setkey()
+		purpose - 
+		inputs - 
+		outputs - 
+		assumptions - 
 	
 null_vnops.c
 	
