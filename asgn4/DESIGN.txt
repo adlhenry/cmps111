@@ -3,6 +3,7 @@
 SYNOPSIS
 	CryptoFS - A simple file encryption system for freeBSD.
 	
+	
 DATA
 encrypt.c
 	execname - program name string
@@ -81,16 +82,17 @@ setkey.c
 					char pointer array, the char pointer array is non-null
 	
 	set_keys()
-		purpose - 
-		inputs - 
+		purpose - split a 64-bit hex key string into two 32-bit ints
+		inputs - two int pointers
 		outputs - none
-		assumptions - 
+		assumptions - the 64-bit hex key is non-null and 16-digits long
 	
 	set_kernkey()
-		purpose - 
-		inputs - 
+		purpose - call setkey() and check the return value for error codes
+		inputs - two ints
 		outputs - none
-		assumptions - 
+		assumptions - the ints contain the key to be inserted or are both
+					  0 to signal key removal
 	
 	main()
 		purpose - check if a key is to be added or removed and
@@ -102,4 +104,7 @@ setkey.c
 					  array and the char pointer array is non-null
 	
 kern_setkey.c
+	
+	
+null_vnops.c
 	
