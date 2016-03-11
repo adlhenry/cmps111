@@ -129,12 +129,12 @@ void set_mode (char *filename, mode_t mode)
 			fprintf(stderr, "file %s is already encrypted\n", filename);
 			exit(EXIT_FAILURE);
 		} else {
-			chmod(filename, mode | S_ISVTX)
+			chmod(filename, mode | S_ISVTX);
 		}
 	}
 	if (dflag) {
 		if (mode & S_ISVTX) {
-			chmod(filename, mode & ~S_ISVTX)
+			chmod(filename, mode & ~S_ISVTX);
 		} else {
 			fprintf(stderr, "file %s is already decrypted\n", filename);
 			exit(EXIT_FAILURE);
