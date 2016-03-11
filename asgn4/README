@@ -5,14 +5,26 @@ TEAM MEMBERS
 	
 COMPILE
 	sudo make buildkernel
-	make
+	make (compile protectfile and setkey programs)
 	
 INSTALL
 	sudo make installkernel
 	sudo shutdown -r now
 	
 TEST
-	make test
+	make test (test protectfile encryption and decryption)
 	
 CONTRIBUTION
+	As the sole contributor, I was responsible for all source development
+	and unit testing. I wrote source code for protectfile and setkey
+	programs and added the setkey() system call to freeBSD.
 	
+	The protectfile program takes a 16-digit hex key and a filename and
+	either encrypts or decrypts the file. The setkey program takes a
+	16-digit hex key and adds it to the kernel key table. Alternatively,
+	setkey -r is specified to remove an existing key from the key table.
+	
+	The setkey() system call handles all user requests to add, replace, and
+	remove a key. The source code for the setkey() system call is spread
+	across multiple files in the kernel source. Full specifications for all
+	source code is found in DESIGN.txt.
