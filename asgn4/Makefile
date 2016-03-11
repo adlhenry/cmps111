@@ -1,7 +1,7 @@
 # Author: Adam Henry, adlhenry@ucsc.edu
 
 CC			= cc -g -O0 -Wall -Wextra -std=c11
-PSOURCE		= encrypt.c rijndael.c
+PSOURCE		= protectfile.c rijndael.c
 SSOURCE   	= setkey.c
 TEST		= test
 POBJECTS	= ${PSOURCE:.c=.o}
