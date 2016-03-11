@@ -121,6 +121,27 @@ getpassword (const char *password, unsigned char *key, int keylen)
 	}
 }
 
+// Check and set the sticky bit for a file
+void set_mode (char *filename, mode_t mode)
+{
+	if (eflag) {
+		if (mode & S_ISVTX) {
+			fprintf(stderr, "file %s is already encrypted\n", filename);
+			exit(EXIT_FAILURE);
+		} else {
+			chmod(filename, mode | S_ISVTX)
+		}
+	}
+	if (dflag) {
+		if (mode & S_ISVTX) {
+			chmod(filename, mode & ~S_ISVTX)
+		} else {
+			fprintf(stderr, "file %s is already decrypted\n", filename);
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
 // Encrypt or decrypt a file using 128-bit AES encryption
 void aes_encrypt (unsigned char *key, char *filename)
 {
@@ -152,6 +173,7 @@ void aes_encrypt (unsigned char *key, char *filename)
 		exit(EXIT_FAILURE);
 	}
 	file_id = sb.st_ino;
+	set_mode(filename, sb.st_mode);
 
 	/* fileID goes into bytes 8-11 of the ctrvalue */
 	bcopy(&file_id, &(ctrvalue[8]), sizeof(file_id));
@@ -208,13 +230,6 @@ int main (int argc, char **argv)
 	parse_options(argc, argv);
 	getpassword(argv[2], key, sizeof(key));
 	filename = argv[3];
-	
-	char buf[100];
-	/* Print the key, just in case */
-	for (int i = 0; i < sizeof(key); i++) {
-		sprintf(buf+2*i, "%02x", key[sizeof(key)-i-1]);
-	}
-	fprintf(stderr, "KEY: %s\n", buf);
 	
 	aes_encrypt(key, filename);
 	return EXIT_SUCCESS;

@@ -38,7 +38,7 @@ SYNOPSIS
 						 (default: more than 16 entries)
 	
 DATA
-encrypt.c
+protectfile.c
 	execname - program name string
 	eflag - either 0 or 1, 1 if -e(--encrypt) was specified
 	dflag - either 0 or 1, 1 if -d(--decrypt) was specified
@@ -74,7 +74,7 @@ Symbol.map
 	setkey - setkey symbol definition (under FBSD_1.4)
 	
 FUNCTIONS
-encrypt.c
+protectfile.c
 	usage()
 		purpose - print a usage message to stderr
 		inputs - none
@@ -102,6 +102,14 @@ encrypt.c
 		outputs - none
 		assumptions - both char pointers are non-null and the int is the
 					  length of the second char pointer's array
+	
+	set_mode()
+		purpose - check a file's access mode and set the sticky bit
+		inputs - a char pointer and a mode_t
+		outputs - none
+		assumptions - the char pointer is non-null and the mode_t contains
+					  the mode for the filename provided, one of either
+					  eflag or dflag is non-zero
 	
 	aes_encrypt()
 		purpose - encrypt or decrypt a file using 128-bit AES encryption
