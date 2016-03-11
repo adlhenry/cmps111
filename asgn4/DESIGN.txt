@@ -64,6 +64,15 @@ kern_setkey.c
 	keylist_index - the current number of null and non-null keys
 					in the keylist
 	
+syscalls.master
+	546 - setkey() system call definition
+	
+compat/freebsd32/syscalls.master
+	546 - setkey() system call definition
+	
+Symbol.map
+	setkey - setkey symbol definition (under FBSD_1.4)
+	
 FUNCTIONS
 encrypt.c
 	usage()
@@ -147,28 +156,30 @@ setkey.c
 	
 kern_setkey.c
 	sk_getkey()
-		purpose - 
-		inputs - 
-		outputs - 
-		assumptions - 
+		purpose - return the 16-digit hex string version of a key for
+				  a user if it exists
+		inputs - a user id
+		outputs - a char pointer
+		assumptions - will return NULL if no key is found
 	
 	sk_hexkey()
-		purpose - 
-		inputs - 
-		outputs - 
+		purpose - transform a pair of key integers into the hex string
+				  equivalent
+		inputs - two ints
+		outputs - a char pointer
 		assumptions - 
 	
 	sk_insertkey()
-		purpose - 
-		inputs - 
-		outputs - 
-		assumptions - 
+		purpose - insert a key into the key table for a user, remove
+				  the key if the two key integers provided are 0
+		inputs - a user id and two ints
+		outputs - an int (0 if successful and -1 if failure)
+		assumptions - if the two key ints are 0, then a key exists for
+					  the user id provided
 	
 	sys_setkey()
-		purpose - 
-		inputs - 
-		outputs - 
-		assumptions - 
-	
-null_vnops.c
-	
+		purpose - set, replace, or remove a key for the user calling
+				  the function
+		inputs - a struct thread pointer and a struct setkey_args pointer
+		outputs - an int (0, KS_INVALIDKEY, or KS_KEYLISTFULL)
+		assumptions - both input pointers are non-null
