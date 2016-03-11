@@ -173,9 +173,10 @@ kern_setkey.c
 	sk_hexkey()
 		purpose - transform a pair of key integers into the hex string
 				  equivalent
-		inputs - two ints
-		outputs - a char pointer
-		assumptions - 
+		inputs - two ints and a char pointer
+		outputs - none
+		assumptions - the char pointer is a character buffer at least 17
+					  bytes long
 	
 	sk_insertkey()
 		purpose - insert a key into the key table for a user, remove

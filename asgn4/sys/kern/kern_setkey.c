@@ -27,6 +27,7 @@
 
 #include <sys/cdefs.h>
 
+#include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/sysent.h>
 #include <sys/sysproto.h>
@@ -40,7 +41,7 @@
 
 static MALLOC_DEFINE(M_KEYSET, "keyset", "Key storing data structures");
 
-keyset *keylist[KS_MAXKEYS];
+struct keyset *keylist[KS_MAXKEYS];
 u_int keylist_index = 0;
 
 char *
@@ -60,24 +61,26 @@ sk_getkey(uid_t uid)
 	return hexkey;
 }
 
-static inline char *
-sk_hexkey(u_int k0, u_int k1)
+static inline void
+sk_hexkey(u_int k0, u_int k1, char *hexkey)
 {
-	if (k0 == 0 && k1 == 0) return NULL;
-	size_t buflen = 17;
-	char hexkey[buflen];
-	snprintf(hexkey, buflen, "%08x%08x", k0, k1);
-	return hexkey;
+	if (k0 == 0 && k1 == 0) {
+		hexkey = NULL;
+		return;
+	}
+	snprintf(hexkey, sizeof(hexkey), "%08x%08x", k0, k1);
 }
 
 static inline int
 sk_insertkey(uid_t uid, u_int k0, u_int k1)
 {
 	struct keyset *key;
+	char hexkey[17];
 	int error, i, nullkey;
 	
 	error = 0;
 	nullkey = -1;
+	sk_hexkey(k0, k1, hexkey);
 	
 	key = NULL;
 	for (i = 0; i < keylist_index; i++) {
@@ -94,7 +97,7 @@ sk_insertkey(uid_t uid, u_int k0, u_int k1)
 	key->ks_uid = uid;
 	key->ks_k0 = k0;
 	key->ks_k1 = k1;
-	key->hexkey = sk_hexkey(k0, k1);
+	key->ks_hexkey = hexkey;
 	
 	if (i < keylist_index) {
 		return (error);
