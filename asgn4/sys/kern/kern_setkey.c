@@ -98,7 +98,7 @@ sk_insertkey(uid_t uid, u_int k0, u_int k1)
 		return (error);
 	}
 	if (nullkey != -1) {
-		free(keylist[nullkey]);
+		free(keylist[nullkey], M_KEYSET);
 		keylist[nullkey] = key;
 	} else if (keylist_index < KS_MAXKEYS) {
 		keylist[keylist_index++] = key;
