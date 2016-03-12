@@ -274,3 +274,138 @@
 		hashed directories
 			use extendible hashing to make lookup faster
 			may be "sparse"
+	Major issue: consistency
+		creating a file can require 5 disk writes
+			a crash in the middle can leave the file system in an inconsistent state
+			example: inode allocated, but not inserted into directory
+		solution: use journaling, as provided in Ext3
+		problem: what do you journal?
+			metadata and data?
+			metadata only?
+				this introduces an ordering constraint
+				data must be written before metadata is written
+	Journaling in Ext3
+		Ext3 uses a journal to record operations before they are written to disk
+		three journaling modes
+			journal: record everything to the journal
+				slowest
+				records data and metadata as soon as they’re written
+			ordered: record only metadata, but order data and metadata writes so
+			there’s no inconsistency
+				faster
+				less safe: metadata updates not committed immediately
+				default mode for Ext3
+			metadata only: record only metadata
+				not as safe as other two
+				fastest of the three
+	Ext3 journal details
+		log record: basic entry in journal
+			one per disk request
+			span of bytes, or entire block
+		atomic operation handle: used to group log records together
+			typically, one handle corresponds to a single system call
+			ensures that high-level operation either completes or never
+			happens (no partial operations)
+		transaction: consists of multiple atomic operations
+			done for efficiency reasons
+			entire transaction written out at once
+			only one transaction "open" at any time
+	FreeBSD vs. Ext3
+		freeBSD inodes have very similar structures
+			set of direct block pointers, and one each single, double, triple indirect pointers
+			similar flags
+			no extents, but supports per-file specification of "block size"
+				larger sizes require more blocks allocated consecutively
+			there are some small differences
+		freeBSD allocates inodes dynamically
+			each inode block holds 128 inodes
+			two allocated initially
+			additional inode blocks allocated as needed
+				potential inode blocks held as free until all other space is used
+		freeBSD uses soft updates to ensure that updates are written in an order that preserves
+		dependencies
+			never point to a structure before it has been initialized
+			never reuse a resource before nullifying all previous pointers to it
+			never reset the old pointer to a live resource before the new pointer has been set
+		freeBSD supports journaling of metadata operations
+		freeBSD supports snapshots by creating a "snapshot file" to save information that may be
+		overwritten by ongoing activity
+	What's new in ext4
+		new features
+			extents
+				handled by a separate two-level extent tree: pointer to it is in the inode
+				need to ensure backwards compatibility
+			option for larger inodes
+			more scalable
+			faster extended attributes
+		Ext4 somewhat compatible with ext2/3
+			mounts old file systems
+			mountable under ext2/3 if no new features (i.e., extents) used
+	CD-ROM file system
+		file catalog in first few blocks of disk
+			lists all files on the CD
+			hierarchical structure can be built by treating files as directories (ISO 9660)
+		files all allocated contiguously
+			no need to handle overwrites
+		current standard (UDF) is a superset of this
+		| directory entry length | extended attribute record length | location of file | file size |
+		  date and time | flags | interleave | CD# | L | basename . ext; ver | padding |
+	MS-DOS (FAT) file system
+		originally designed for floppy disks
+			originally designed for small (5 MB) hard drives
+			commonly used for thumb drives and SD cards
+		single list of blocks in use (FAT => File Allocation Table)
+			fixed overhead per block
+			easy to find all blocks in a file
+		root directory “file” starts in block 0
+			other files have first block number in directory entry
+	MS-DOS File Allocation Table sizes
+		block size	fat-12	fat-16	fat-32
+		0.5KB		2MB
+		1KB			4MB
+		2KB			8MB		128MB
+		4KB			16MB	256MB	1TB
+		8KB					512MB	2TB
+		16KB				1024MB	2TB
+		32KB				2048MB	2TB
+	Directory entry in FAT
+		| filename | extension | attributes | reserved | time | date | first block number | size |
+		bytes 8			3			1			10		 2		2		2					4
+	Storing a long name in VFAT
+		long name stored in Windows 98 so that it’s backwards compatible with short names
+			short name in “real” directory entry
+			long name in “fake” directory entries: ignored by older systems
+		OS designers will go to great lengths to make new systems work with older systems
+	Zettabyte File System (ZFS)
+		designed to handle very large disk partitions
+		extensive error checking and recovery
+			checksums on individual blocks
+			RAID at the file level (RAIDZ)
+		never overwrites data in place: no chance of inconsistent state
+			write new blocks to disk into previously-free blocks
+			write a new uberblock to reference the new file system state
+			transition from one consistent state to another is done with a single block write
+		some properties similar to log-structured file systems
+			no overwrite-in-place
+			needs cleaning
+			but can write anywhere on disk: no need for segments
+	Virtual file system switch
+		how can the OS use multiple file systems?
+			HFS+ / ext3 / NTFS
+			VFAT
+			ISO 9660 / UDF
+		much code is common between them
+			directory lookups
+			caching
+		solution: virtual file system (VFS) switch
+			abstracts out common functionality
+			provides default routines for many common functions
+	Layering file systems
+		often useful to layer one file system on top of another one
+			use the underlying file system for many operations
+			add (or enhance) functionality in the layered file system
+		example: stacking file systems in FreeBSD
+			nullfs: stacked file system does nothing
+			FUSE: file system intercepts calls and lets a user-space program handle them
+				this makes it easier to implement "interesting" functionality with a file system
+				interface
