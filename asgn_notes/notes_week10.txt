@@ -1,4 +1,146 @@
 3/7/16:
+	Issues with free space management
+		OS must protect data structures used for free space management
+		OS must keep in-memory and on-disk structures consistent
+			update free list when block removed - change pointer in previous block
+			update bit map when block allocated
+				set bit[j] in free map to 1 on disk before using block[j] in
+				file and setting bit[j] to 1 in memory
+			OS crash may leave bit[j] == 1, when block not in use
+			OS checks the file system when it boots
+		Managing free space is a slowdown in file systems
+	Big or small file blocks?
+		larger blocks are
+			faster - transfer more data per seek
+			less efficient - waste space
+	What's in a directory?
+		Two types of information
+			file names
+			file metadata (size, timestamps, etc.)
+		basic choices for directory information
+			store all information in directory
+				fixed size entries
+				disk addresses and attributes in directory entry
+		store names & pointers to index nodes (i-nodes)
+	Directory structures
+		structure
+			linear list of files (often itself stored in a file)
+			simple to program
+			slow to run
+			increase speed by keeping it sorted (insertions are slower)
+		hash table: name hashed and looked up in file
+			decreases search time: no linear searches
+			may be difficult to expand
+			can result in collisions (two files hash to same location)
+		tree
+			fast for searching
+			easy to expand
+			difficult to do in on-disk directory
+		name length
+			fixed: easy to program
+			variable: more flexible, better for users
+	Using links
+		A creates a file, and inserts into her directory
+		B shares the file by creating a link to it
+		A unlinks the file
+			B still links to the file
+			owner is still A (unless B explicitly changes it)
+	Log-structured file systems
+		trends in disk & memory
+			faster CPUs
+			larger memories
+		result
+			more memory => disk caches can also be larger
+			increasing number of read requests can come from cache
+			thus, most disk accesses will be writes
+		LFS structures entire disk as a log
+			all writes initially buffered in memory
+			periodically write these to the end of the disk log
+			when file opened, locate i-node, then find blocks
+	LFS
+		divide disk into segments
+			write data sequentially to segments
+			read data from wherever it’s stored
+		periodically, “clean” segments
+			go through a segment and copy live data to a new location
+			mark the segment as free
+	Disk quotas
+		quotas limit users’ allocation
+			space might be rented
+			protect the system from rogue programs allocating space
+		hard limits may not be exceeded
+		soft limits generate warnings
+			number of warnings may be limited
+			generate too many warnings => treat as hard limit
+	Backing up a file system
+		goal: create an extra copy of each file in the file system
+			protect against disk failure
+			protect against human error
+			allow the system to track changes over time
+		two basic types of backups
+			full backup: make a copy of every file in the system
+			incremental backup: only make a copy of files that have changed since
+			the last backup
+			faster: fewer files to copy
+			smaller
+		incremental backups typically require a full backup as a “base”
+	Backup mechanics
+		actually copy blocks from one file system to another
+			safe if original FS fails
+			safe if original FS is corrupted
+			may be difficult to find modified files
+			somewhat slow
+		snapshot
+			new data doesn’t overwrite old data
+			easy to recover “deleted” files
+			fast
+			not as helpful for failed devices or corrupted FS
+			snapshots can be done with hard links
+	Finding files to back up
+		“walk” the file system tree looking for files modified since the last backup
+			slow
+			works on any file system
+		scan the list of i-nodes looking for modified files
+			faster (sequential access)
+			FS-specific code (may require raw
+			disk access)
+		keep a log of changes the FS makes
+			can be very fast
+			requires help from the FS
+	Checking a file system for consistency
+		build “in use” map by traversing all file i-nodes
+			add 1 to block entry if mentioned in block list
+		free map built from free list (or just use free block bitmap if it exists)
+		consistent - used and free lists inverted bits
+		missing block - 0 in used, 0 in free
+		duplicate block in free list - 0 in used, 2 in free
+		duplicate block in multiple files - 2 in used, 0 in free
+	Fixing inconsistencies
+		block marked neither free nor in use: mark free
+			no file is using it, so mark it free
+		block marked both free and in use: mark in use
+			best to give it to the file that’s using it
+		block marked free more than once: mark free
+			ensure that it’s only on the free list once
+		block in use in two files: ask user?
+			difficult to decide what to do in this case
+			consistency checking is designed to avoid having this happen: other
+			cases are easy to handle
+		this is the reasoning behind ordered updates of data and metadata
+	File system cache
+		many files are used repeatedly
+			option: read it each time from disk
+			better: keep a copy in memory
+		file system cache
+			set of recently used file blocks
+			keep blocks just referenced
+			throw out old, unused blocks
+				same kinds of algorithms as for virtual memory
+				more effort per reference is OK: file references are a lot less frequent than
+				memory references
+		goal: eliminate as many disk accesses as possible
+			repeated reads & writes
+			files deleted before they’re ever written to disk
 	
 3/9/16:
 	
