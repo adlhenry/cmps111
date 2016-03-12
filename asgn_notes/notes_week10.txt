@@ -65,7 +65,7 @@
 			go through a segment and copy live data to a new location
 			mark the segment as free
 	Disk quotas
-		quotas limit users’ allocation
+		quotas limit users' allocation
 			space might be rented
 			protect the system from rogue programs allocating space
 		hard limits may not be exceeded
@@ -97,7 +97,7 @@
 			not as helpful for failed devices or corrupted FS
 			snapshots can be done with hard links
 	Finding files to back up
-		“walk” the file system tree looking for files modified since the last backup
+		"walk" the file system tree looking for files modified since the last backup
 			slow
 			works on any file system
 		scan the list of i-nodes looking for modified files
@@ -143,6 +143,134 @@
 			files deleted before they’re ever written to disk
 	
 3/9/16:
+	Managing the file cache: reads
+		update block lists on every read (and write)
+			affordable: update is fast even compared to read of cached data
+			evict blocks from cache using LRU, LFU, aging, or other VM-like algorithms
+		readahead: fetch blocks that might be needed soon
+			example: read block n+1 after reading block n of a file
+			may be very inexpensive: disk controller has the block in its own cache
+			particularly helpful if file is accessed sequentially: keep track of
+			sequentiality to decide whether to read ahead
+			not very detrimental if the OS guesses wrong: only waste a bit of disk
+			bandwidth, and often no seek
+	Managing the file cache: writes
+		buffer writes in cache (writeback cache)
+		periodically go through cache writing back dirty blocks
+			typically about every 30 seconds on Unix
+		benefits
+			multiple writes to a single file block are coalesced
+			files that are created and deleted quickly are never written to disk
+		cache can be flushed manually if needed: sync()
+	Defragmenting disks
+		files on disk are stored where there's space
+		on a full disk, files can be fragmented: stored non-contiguously
+			"older" disks can have lots of fragmented files
+		solution: defragment the disk
+			collect blocks of each file together and store them contiguously
+			some file systems do this automatically
+	Ext2 & Ext3: the Linux file system
+		Ext2/3 were the standard Linux file system
+			similar to BSD’s Fast File System (FFS)
+		Ext3 is like Ext2, but with journaling
+		Ext2/3 is designed to be
+			flexible across a wide range of workloads
+			(relatively) simple to implement
+			reliable
+			usable across a wide range of file system sizes from hundreds of
+			megabytes to terabytes
+		basic design hasn’t changed much in 20 years
+			Ext4 is now in use
+	Large-scale structure in Ext3
+		| boot | block group 0 | block group 1 | ... |
+		| super block | group descriptors | data block bitmap | i-node bitmap | i-node table | data blocks |
+		size	1				x					1				1				m				n
+		disk broken into x block groups
+		each block group is a (mostly) self-contained unit
+			files can span block groups, but doesn’t happen often
+			most information is local to the block group
+		bitmaps must fit into a single file system block, limiting the number of data
+		blocks
+		copies of the superblock and group descriptors are stored in every block
+		group for reliability
+	Superblock
+		information about the file system as a whole
+			file block size & number of blocks
+			fragment size & number of fragments
+			number of blocks / fragments / inodes per group
+		updated when the file system is modified
+			free block & free inode counters
+			time of last mount and write
+		superblock cached in memory, updated on disk frequently
+		superblock copy kept in each block group
+			guards against loss of the superblock to disk corruption
+			makes it more convenient to write out a copy in the nearest
+			location
+	Group descriptor
+		one descriptor for each group
+		block numbers for
+			block bitmap
+			inode bitmap
+			first inode table block
+		counts (limited to 16-bit integers)
+			free blocks in the group
+			free inodes in the group
+			directories in the group
+		each block group has a copy of all group descriptors
+	More on block groups
+		block group limited to maximum of block_size × 8 blocks (so block
+		bitmap fits in a single block)
+			maximum size (8 KB blocks) is 512 MB
+			may have any number of block groups per file system
+		maximum of 64K inodes per block group
+		size of inode region (in blocks) calculated by
+		num_inodes / (block_size/128)
+			this determines the number of data blocks as well
+		all block groups must be the same size
+	Inode contents
+		inode contains a file's metadata
+			ownership & permissions
+			time stamps
+			block pointers
+		inodes stored in the inode region in the block group
+			inode number maps to a particular group / offset for the inode
+		soft link stored in inode if possible (using block pointers)
+		file "hole": missing blocks in the middle of a large file
+	Inode fields
+		mode - type & access rights
+		owner - file owner
+		gid - group identifier
+		blocks - number of data blocks
+		size - length in bytes
+		atime - last access time
+		ctime - last time inode modified
+		mtime - last time file contents modified
+		link count - number of hard links
+		flags - file flags
+		pointers - pointers to data blocks (direct, single/double/triple indirect)
+	More on Unix FFS and Linus Ext3
+		first few block pointers kept in inode
+			small files have no extra overhead for index blocks
+			reading & writing small files is fast
+		indirect structures only allocated if needed
+		for 4 KB file blocks (common in Unix), max file sizes are
+			48 KB in directory (usually 12 direct blocks)
+			1024 × 4 KB = 4 MB of additional file data for single indirect
+			1024 × 1024 × 4 KB = 4 GB of additional file data for double indirect
+			1024 × 1024 × 1024 × 4 KB = 4 TB for triple indirect
+		maximum of 5 accesses for any file block on disk
+			1 access to read inode and 1 to read file block
+			maximum of 3 accesses to index blocks
+			usually much fewer (1–2) because inode in memory
 	
 3/11/16:
-	
+	Linux directories
+		linux supports
+			plain text directories
+			hashed directories
+			plain text more common, but slower
+		directories just like regular files
+		name length limited to 255 bytes
+		hashed directories
+			use extendible hashing to make lookup faster
+			may be "sparse"
