@@ -26,11 +26,13 @@ rijndael.o: rijndael.h
 clean :
 	- rm ${POBJECTS} ${SOBJECTS}
 
-test:
+test: all
+	@echo "=== protectfile tests ==="
 	cp ${TEST} ${TEST}.orig
 	./${PEXECBIN} -e 0123456789abcdef ${TEST}
 	./${PEXECBIN} -d 0123456789abcdef ${TEST}
 	diff ${TEST} ${TEST}.orig
+	@echo "===== setkey tests ====="
 	./${SEXECBIN} -r
 	./${SEXECBIN} -a 0123456789abcdef
 	./${SEXECBIN} -r
