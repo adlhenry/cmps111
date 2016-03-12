@@ -5,7 +5,7 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/setkey.h>
+#include <sys/syscall.h>
 
 // Program name
 char *execname;
@@ -70,7 +70,7 @@ void set_keys (int *k0, int *k1)
 // Call setkey() and check for failure
 void set_kernkey (int k0, int k1)
 {
-	if (setkey(k0, k1) != 0) {
+	if (syscall(546, k0, k1) != 0) {
 		fprintf(stderr, "%s: unable to modify the key\n", execname);
 		exit(EXIT_FAILURE);
 	}

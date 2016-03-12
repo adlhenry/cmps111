@@ -12,7 +12,8 @@ INSTALL
 	sudo shutdown -r now
 	
 TEST
-	make test (test protectfile encryption and decryption)
+	make test - test protectfile encryption and decryption,
+				test setkey key add and remove
 	
 CONTRIBUTION
 	As the sole contributor, I was responsible for all source development

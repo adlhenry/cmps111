@@ -26,8 +26,11 @@ rijndael.o: rijndael.h
 clean :
 	- rm ${POBJECTS} ${SOBJECTS}
 
-test: all
+test:
 	cp ${TEST} ${TEST}.orig
 	./${PEXECBIN} -e 0123456789abcdef ${TEST}
 	./${PEXECBIN} -d 0123456789abcdef ${TEST}
 	diff ${TEST} ${TEST}.orig
+	./${SEXECBIN} -r
+	./${SEXECBIN} -a 0123456789abcdef
+	./${SEXECBIN} -r
